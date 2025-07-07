@@ -1,9 +1,8 @@
-// ตัวอย่างที่ใช้ BottomNavigationBar
 import 'package:flutter/material.dart';
-import 'dashboard_screen.dart';
-import 'installments_screen.dart';
-import 'payment_screen.dart';
-import 'profile_screen.dart'; // ต้อง import อันนี้ (ของใหม่)
+import 'screens/dashboard_screen.dart';
+import 'screens/installments_screen.dart';
+import 'screens/payment_screen.dart';
+import 'screens/profile_screen.dart';
 
 class MainApp extends StatefulWidget {
   const MainApp({super.key});
@@ -18,13 +17,11 @@ class _MainAppState extends State<MainApp> {
     DashboardScreen(),
     InstallmentsScreen(),
     PaymentScreen(),
-    ProfileScreen(), // ต้องเป็น ProfileScreen() ตัวใหม่
+    ProfileScreen(),
   ];
 
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    setState(() => _selectedIndex = index);
   }
 
   @override
