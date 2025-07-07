@@ -1,6 +1,9 @@
+// ตัวอย่างที่ใช้ BottomNavigationBar
 import 'package:flutter/material.dart';
-import 'screens/dashboard_screen.dart';
-import 'screens/installments_screen.dart';
+import 'dashboard_screen.dart';
+import 'installments_screen.dart';
+import 'payment_screen.dart';
+import 'profile_screen.dart'; // ต้อง import อันนี้ (ของใหม่)
 
 class MainApp extends StatefulWidget {
   const MainApp({super.key});
@@ -11,12 +14,11 @@ class MainApp extends StatefulWidget {
 
 class _MainAppState extends State<MainApp> {
   int _selectedIndex = 0;
-
-  final List<Widget> _screens = [
+  static final List<Widget> _widgetOptions = <Widget>[
     DashboardScreen(),
     InstallmentsScreen(),
-    Center(child: Text('Payments')),
-    Center(child: Text('Profile')),
+    PaymentScreen(),
+    ProfileScreen(), // ต้องเป็น ProfileScreen() ตัวใหม่
   ];
 
   void _onItemTapped(int index) {
@@ -28,19 +30,19 @@ class _MainAppState extends State<MainApp> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _screens[_selectedIndex],
+      body: _widgetOptions[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: Colors.red[800],
-        unselectedItemColor: Colors.grey,
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        items: [
+        items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'หน้าแรก'),
-          BottomNavigationBarItem(icon: Icon(Icons.receipt_long), label: 'สินเชื่อ'),
-          BottomNavigationBarItem(icon: Icon(Icons.payment), label: 'เก็บเงิน'),
+          BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: 'สินเชื่อ'),
+          BottomNavigationBarItem(icon: Icon(Icons.payments), label: 'เก็บเงิน'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'โปรไฟล์'),
         ],
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+        selectedItemColor: Colors.red[900],
+        unselectedItemColor: Colors.grey[600],
+        showUnselectedLabels: true,
       ),
     );
   }

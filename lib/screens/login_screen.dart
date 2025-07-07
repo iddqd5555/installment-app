@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/api_service.dart';
-import '../main_app.dart';
+// import '../services/api_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -10,77 +9,96 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController phoneController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
-
-  final ApiService apiService = ApiService();
-
+  final phoneController = TextEditingController();
+  final passwordController = TextEditingController();
   bool isLoading = false;
 
   void login() async {
-    setState(() {
-      isLoading = true;
-    });
-
-    bool success = await apiService.login(
-      phoneController.text,
-      passwordController.text,
-    );
-
-    setState(() {
-      isLoading = false;
-    });
+    setState(() => isLoading = true);
+    // bool success = await ApiService().login(phoneController.text, passwordController.text);
+    bool success = true; // สำหรับ demo เท่านั้น
+    setState(() => isLoading = false);
 
     if (success) {
-      // Login สำเร็จ
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Login successful!")),
-      );
-      // ไปหน้า MainApp ทันที
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => MainApp()),
-      );
+      // ไปหน้า MainApp จริง
+      Navigator.pushReplacementNamed(context, "/main");
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Login failed. Try again.")),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("เข้าสู่ระบบไม่สำเร็จ!")));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Login')),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            TextField(
-              controller: phoneController,
-              decoration: InputDecoration(
-                labelText: 'Phone Number',
-                border: OutlineInputBorder(),
+      backgroundColor: Colors.white,
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // LOGO + APP NAME
+              CircleAvatar(
+                radius: 48,
+                backgroundColor: Colors.amber[700],
+                child: Text("W", style: TextStyle(color: Colors.white, fontSize: 54, fontWeight: FontWeight.bold, letterSpacing: 1)),
               ),
-            ),
-            SizedBox(height: 20),
-            TextField(
-              controller: passwordController,
-              decoration: InputDecoration(
-                labelText: 'Password',
-                border: OutlineInputBorder(),
+              const SizedBox(height: 16),
+              Text(
+                "WisdomGold",
+                style: TextStyle(
+                  fontSize: 30, fontWeight: FontWeight.bold,
+                  color: Colors.red[900], letterSpacing: 1.5,
+                ),
               ),
-              obscureText: true,
-            ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: isLoading ? null : login,
-              child: isLoading
-                  ? CircularProgressIndicator()
-                  : Text('Login'),
-            ),
-          ],
+              const SizedBox(height: 8),
+              Text("ระบบผ่อนทอง by WisdomGold", style: TextStyle(color: Colors.grey[700])),
+              const SizedBox(height: 28),
+
+              // LOGIN FORM
+              TextField(
+                controller: phoneController,
+                keyboardType: TextInputType.phone,
+                decoration: InputDecoration(
+                  prefixIcon: Icon(Icons.phone_android),
+                  labelText: 'เบอร์โทรศัพท์',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: passwordController,
+                obscureText: true,
+                decoration: InputDecoration(
+                  prefixIcon: Icon(Icons.lock),
+                  labelText: 'รหัสผ่าน',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 22),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  icon: isLoading ? SizedBox(
+                    width: 22, height: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  ) : Icon(Icons.login, color: Colors.white),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red[900],
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    textStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  label: Text(isLoading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"),
+                  onPressed: isLoading ? null : login,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                child: Text("ลืมรหัสผ่าน?", style: TextStyle(color: Colors.red[900])),
+                onPressed: () {},
+              ),
+            ],
+          ),
         ),
       ),
     );
