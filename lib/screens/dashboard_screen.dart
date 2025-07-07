@@ -23,16 +23,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   fetchDashboard() async {
     final data = await apiService.getDashboardData();
-    final payments = await apiService.getPaymentHistory();
     setState(() {
       dashboardData = data;
-      paymentHistory = payments;
+      paymentHistory = data?['payment_history'] ?? [];
       isLoading = false;
     });
   }
 
-  double parseNumber(String? value) {
-    return double.tryParse(value?.replaceAll(',', '') ?? '0') ?? 0;
+  double parseNumber(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString().replaceAll(',', '')) ?? 0.0;
   }
 
   String formatDate(String? dt) {
@@ -41,7 +42,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final d = DateTime.parse(dt);
       return DateFormat('d MMM yyyy HH:mm', 'th').format(d);
     } catch (_) {
-      return dt ?? "-";
+      return dt;
     }
   }
 
@@ -138,17 +139,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               Align(
                                 alignment: Alignment.centerRight,
                                 child: Text(
-                                  '${parseNumber(dashboardData?['total_paid']).toStringAsFixed(2)} / ${parseNumber(dashboardData?['total_installment_amount']).toStringAsFixed(2)} บาท (${((parseNumber(dashboardData?['total_paid']) / parseNumber(dashboardData?['total_installment_amount'])) * 100).toStringAsFixed(2)}%)',
+                                  '${parseNumber(dashboardData?['total_paid']).toStringAsFixed(2)} / ${parseNumber(dashboardData?['total_installment_amount']).toStringAsFixed(2)} บาท (${((parseNumber(dashboardData?['total_paid']) / (parseNumber(dashboardData?['total_installment_amount']) == 0 ? 1 : parseNumber(dashboardData?['total_installment_amount'])) ) * 100).toStringAsFixed(2)}%)',
                                   style: TextStyle(fontSize: 14),
                                 ),
                               ),
                               Divider(height: 20, thickness: 1),
                               Builder(
                                 builder: (_) {
-                                  int installmentPeriod = (dashboardData?['installment_period'] as num?)?.toInt() ?? 1;
-                                  int daysPassed = ((dashboardData?['days_passed'] as num?)?.toInt() ?? 0)
-                                      .clamp(0, installmentPeriod)
-                                      .toInt();
+                                  int installmentPeriod = int.tryParse('${dashboardData?['installment_period'] ?? 1}') ?? 1;
+                                  int daysPassed = int.tryParse('${dashboardData?['days_passed'] ?? 0}') ?? 0;
                                   double timeProgress = installmentPeriod != 0 ? daysPassed / installmentPeriod : 0;
                                   return Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -200,26 +199,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ),
                                 child: Row(
                                   children: [
-                                    Icon(Icons.add_circle, color: Colors.green, size: 30),
+                                    Icon(getStatusIcon(p['status']), color: getStatusColor(p['status']), size: 30),
                                     SizedBox(width: 12),
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          Text("โอนเงิน", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                                          Text("${parseNumber(p['amount_paid']?.toString()).toStringAsFixed(2)} บาท",
+                                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                                           Text(formatDate(p['payment_due_date']), style: TextStyle(color: Colors.grey[700], fontSize: 13)),
                                         ],
                                       ),
                                     ),
-                                    Text(
-                                      '${parseNumber(p['amount_paid']?.toString()).toStringAsFixed(2)} บาท',
-                                      style: TextStyle(
-                                        color: Colors.green[700],
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16
-                                      ),
-                                    ),
-                                    SizedBox(width: 12),
                                     Row(
                                       children: [
                                         Icon(getStatusIcon(p['status']), color: getStatusColor(p['status'])),
