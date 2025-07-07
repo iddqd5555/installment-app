@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:installment_app/services/api_service.dart';
+import '../services/api_service.dart';
 import 'installment_detail_screen.dart';
 
 class InstallmentsScreen extends StatefulWidget {
@@ -47,14 +47,14 @@ class _InstallmentsScreenState extends State<InstallmentsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('สัญญาสินเชื่อของฉัน'),
+        title: const Text('สัญญาสินเชื่อของฉัน'),
         backgroundColor: Colors.red[900],
         foregroundColor: Colors.white,
       ),
       body: isLoading
-          ? Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator())
           : ListView.builder(
-              padding: EdgeInsets.all(10),
+              padding: const EdgeInsets.all(10),
               itemCount: installments.length,
               itemBuilder: (context, index) {
                 final installment = installments[index];
@@ -64,7 +64,7 @@ class _InstallmentsScreenState extends State<InstallmentsScreen> {
                     leading: Icon(Icons.receipt_long, size: 32, color: getStatusColor(installment['status'])),
                     title: Text(
                       'สัญญาเลขที่: ${installment['contract_number'] ?? "-"}',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -77,7 +77,7 @@ class _InstallmentsScreenState extends State<InstallmentsScreen> {
                         Text('สถานะสัญญา: ${installment['status']}'),
                       ],
                     ),
-                    trailing: Icon(Icons.arrow_forward_ios),
+                    trailing: const Icon(Icons.arrow_forward_ios),
                     onTap: () {
                       Navigator.push(
                         context,
