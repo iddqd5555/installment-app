@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../main_app.dart';
 // import '../services/api_service.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -15,13 +16,18 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void login() async {
     setState(() => isLoading = true);
+
+    // เชื่อมต่อกับ ApiService จริง
     // bool success = await ApiService().login(phoneController.text, passwordController.text);
-    bool success = true; // สำหรับ demo เท่านั้น
+    bool success = true; // สำหรับ demo หรือทดสอบ
+
     setState(() => isLoading = false);
 
     if (success) {
-      // ไปหน้า MainApp จริง
-      Navigator.pushReplacementNamed(context, "/main");
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => MainApp()),
+      );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("เข้าสู่ระบบไม่สำเร็จ!")));
     }
