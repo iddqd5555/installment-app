@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -10,7 +12,13 @@ class ApiService {
     _dio.options.headers['Accept'] = 'application/json';
   }
 
-  // ล็อกอิน
+  // ดึง token ที่ save ไว้
+  Future<String> getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('token') ?? '';
+  }
+
+  // ———————— LOGIN/REGISTER ————————
   Future<bool> login(String phone, String password) async {
     try {
       final response = await _dio.post('/login', data: {
@@ -31,15 +39,12 @@ class ApiService {
     }
   }
 
-  // ดึงข้อมูล installments (รายการสัญญาทั้งหมด)
+  // ———————— DASHBOARD & PAYMENT ————————
   Future<List<dynamic>> getInstallments() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token') ?? '';
-
+    final token = await getToken();
     try {
       final response = await _dio.get('/installments',
           options: Options(headers: {'Authorization': 'Bearer $token'}));
-
       if (response.statusCode == 200) {
         return response.data;
       } else {
@@ -52,15 +57,11 @@ class ApiService {
     }
   }
 
-  // ✅ เพิ่มเมธอดดึงข้อมูล dashboard (ที่ต้องเพิ่มชัดเจนที่สุดตอนนี้)
   Future<dynamic> getDashboardData() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token') ?? '';
-
+    final token = await getToken();
     try {
       final response = await _dio.get('/dashboard-data',
           options: Options(headers: {'Authorization': 'Bearer $token'}));
-
       if (response.statusCode == 200) {
         return response.data;
       } else {
@@ -74,13 +75,10 @@ class ApiService {
   }
 
   Future<List<dynamic>> getPaymentHistory() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token') ?? '';
-
+    final token = await getToken();
     try {
       final response = await _dio.get('/payments',
           options: Options(headers: {'Authorization': 'Bearer $token'}));
-
       if (response.statusCode == 200) {
         return response.data;
       } else {
@@ -92,4 +90,64 @@ class ApiService {
     }
   }
 
+  // ———————— PROFILE ————————
+  // ดึงข้อมูลโปรไฟล์
+  Future<Map<String, dynamic>?> getProfile() async {
+    final token = await getToken();
+    try {
+      final response = await _dio.get('/user/profile',
+          options: Options(headers: {'Authorization': 'Bearer $token'}));
+      if (response.statusCode == 200) {
+        // ถ้า Laravel ส่ง user object มาตรง ๆ
+        if (response.data is Map<String, dynamic>) {
+          return response.data;
+        } else if (response.data is String) {
+          return jsonDecode(response.data);
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Get profile error: $e');
+      return null;
+    }
+  }
+
+  // อัปเดตโปรไฟล์ (พร้อมอัปโหลดไฟล์)
+  Future<bool> updateProfile(
+    Map<String, dynamic> data, {
+    File? idCardImage,
+  }) async {
+    final token = await getToken();
+    FormData formData = FormData.fromMap({
+      ...data,
+      if (idCardImage != null)
+        'id_card_image': await MultipartFile.fromFile(
+          idCardImage.path,
+          filename: idCardImage.path.split('/').last,
+        ),
+    });
+
+    try {
+      final response = await _dio.post(
+        '/user/profile/update',
+        data: formData,
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'multipart/form-data',
+          },
+        ),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      print('Update profile error: $e');
+      return false;
+    }
+  }
+
+  // ———— GET IMAGE URL (สำหรับรูปโปรไฟล์ที่เป็นไฟล์) ————
+  String getImageUrl(String filename) {
+    // ถ้า storage link แล้ว รูปจะอยู่ที่ /storage/uploads/filename
+    return 'http://192.168.1.43:8000/storage/uploads/$filename';
+  }
 }
