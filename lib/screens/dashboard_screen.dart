@@ -90,19 +90,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.red[900],
-        title: Text('📊 Dashboard การผ่อนของคุณ', style: TextStyle(color: Colors.white)),
+        title: const Text('📊 Dashboard การผ่อนของคุณ', style: TextStyle(color: Colors.white)),
       ),
       body: isLoading
-          ? Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator())
           : (dashboardData == null || dashboardData.isEmpty)
-              ? Center(
+              ? const Center(
                   child: Text(
                     "ไม่มีข้อมูลการผ่อน",
                     style: TextStyle(fontSize: 18),
                   ),
                 )
               : SingleChildScrollView(
-                  padding: EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -116,16 +116,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             children: [
                               Text(
                                 '📌 ผ่อนทองจำนวน: ${dashboardData?['gold_amount'] ?? '-'} บาททอง',
-                                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                               ),
-                              Divider(height: 20, thickness: 1),
+                              const Divider(height: 20, thickness: 1),
                               detailRow(Icons.payment, 'ยอดที่ต้องชำระวันนี้', '${parseNumber(dashboardData?['due_today']).toStringAsFixed(2)} บาท'),
                               detailRow(Icons.account_balance_wallet, 'ยอดชำระล่วงหน้า', '${parseNumber(dashboardData?['advance_payment']).toStringAsFixed(2)} บาท'),
                               detailRow(Icons.calendar_today, 'วันชำระครั้งถัดไป', dashboardData?['next_payment_date'] ?? '-'),
                               detailRow(Icons.warning, 'ค่าปรับสะสม', '${parseNumber(dashboardData?['total_penalty']).toStringAsFixed(2)} บาท'),
-                              Divider(height: 20, thickness: 1),
-                              Text('💰 ชำระแล้วทั้งหมด', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                              SizedBox(height: 8),
+                              const Divider(height: 20, thickness: 1),
+                              const Text('💰 ชำระแล้วทั้งหมด', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                              const SizedBox(height: 8),
                               LinearProgressIndicator(
                                 value: parseNumber(dashboardData?['total_installment_amount']) != 0
                                     ? parseNumber(dashboardData?['total_paid']) / parseNumber(dashboardData?['total_installment_amount'])
@@ -135,15 +135,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 minHeight: 12,
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              SizedBox(height: 8),
+                              const SizedBox(height: 8),
                               Align(
                                 alignment: Alignment.centerRight,
                                 child: Text(
                                   '${parseNumber(dashboardData?['total_paid']).toStringAsFixed(2)} / ${parseNumber(dashboardData?['total_installment_amount']).toStringAsFixed(2)} บาท (${((parseNumber(dashboardData?['total_paid']) / (parseNumber(dashboardData?['total_installment_amount']) == 0 ? 1 : parseNumber(dashboardData?['total_installment_amount'])) ) * 100).toStringAsFixed(2)}%)',
-                                  style: TextStyle(fontSize: 14),
+                                  style: const TextStyle(fontSize: 14),
                                 ),
                               ),
-                              Divider(height: 20, thickness: 1),
+                              const Divider(height: 20, thickness: 1),
                               Builder(
                                 builder: (_) {
                                   int installmentPeriod = int.tryParse('${dashboardData?['installment_period'] ?? 1}') ?? 1;
@@ -154,9 +154,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     children: [
                                       Text(
                                         '⏳ ระยะเวลาการผ่อน: $daysPassed / $installmentPeriod วัน',
-                                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                                       ),
-                                      SizedBox(height: 8),
+                                      const SizedBox(height: 8),
                                       LinearProgressIndicator(
                                         value: timeProgress,
                                         backgroundColor: Colors.grey[300],
@@ -166,7 +166,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       ),
                                       Align(
                                         alignment: Alignment.centerRight,
-                                        child: Text('${(timeProgress * 100).toStringAsFixed(2)}%', style: TextStyle(fontSize: 14)),
+                                        child: Text('${(timeProgress * 100).toStringAsFixed(2)}%', style: const TextStyle(fontSize: 14)),
                                       ),
                                     ],
                                   );
@@ -176,7 +176,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                         ),
                       ),
-                      SizedBox(height: 24),
+                      const SizedBox(height: 24),
                       Card(
                         elevation: 2,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -185,28 +185,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('📋 ประวัติการชำระเงินล่าสุด', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
-                              Divider(height: 18),
+                              const Text('📋 ประวัติการชำระเงินล่าสุด', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+                              const Divider(height: 18),
                               if (paymentHistory.isEmpty)
-                                Text("ยังไม่มีประวัติการชำระ", style: TextStyle(color: Colors.grey)),
+                                const Text("ยังไม่มีประวัติการชำระ", style: TextStyle(color: Colors.grey)),
                               ...paymentHistory.map((p) => Container(
-                                margin: EdgeInsets.symmetric(vertical: 8),
-                                padding: EdgeInsets.all(12),
+                                margin: const EdgeInsets.symmetric(vertical: 8),
+                                padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
                                   color: Colors.grey[100],
                                   borderRadius: BorderRadius.circular(14),
-                                  boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0,1))]
+                                  boxShadow: [const BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0,1))]
                                 ),
                                 child: Row(
                                   children: [
                                     Icon(getStatusIcon(p['status']), color: getStatusColor(p['status']), size: 30),
-                                    SizedBox(width: 12),
+                                    const SizedBox(width: 12),
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text("${parseNumber(p['amount_paid']?.toString()).toStringAsFixed(2)} บาท",
-                                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                                           Text(formatDate(p['payment_due_date']), style: TextStyle(color: Colors.grey[700], fontSize: 13)),
                                         ],
                                       ),
@@ -214,7 +214,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     Row(
                                       children: [
                                         Icon(getStatusIcon(p['status']), color: getStatusColor(p['status'])),
-                                        SizedBox(width: 4),
+                                        const SizedBox(width: 4),
                                         Text(
                                           getStatusText(p['status']),
                                           style: TextStyle(
@@ -240,13 +240,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget detailRow(IconData icon, String title, String value) {
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
           Icon(icon, size: 20, color: Colors.orange),
-          SizedBox(width: 10),
-          Expanded(child: Text(title, style: TextStyle(fontSize: 16, color: Colors.black87))),
-          Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          const SizedBox(width: 10),
+          Expanded(child: Text(title, style: const TextStyle(fontSize: 16, color: Colors.black87))),
+          Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         ],
       ),
     );
