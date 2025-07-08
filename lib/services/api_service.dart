@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
@@ -19,6 +20,25 @@ class ApiService {
     print("GET TOKEN FROM PREF: $token");
     return token ?? '';
   }
+
+  // ========== เพิ่ม ฟังก์ชันนี้ (จะได้ใช้กับทุก API) ==========
+  Future<Map<String, dynamic>> getCurrentLocationMap() async {
+    try {
+      final pos = await Geolocator.getCurrentPosition();
+      return {
+        'latitude': pos.latitude,
+        'longitude': pos.longitude,
+        'isMocked': pos.isMocked,
+      };
+    } catch (e) {
+      return {
+        'latitude': null,
+        'longitude': null,
+        'isMocked': null,
+      };
+    }
+  }
+  // ===========================================================
 
   // LOGIN/REGISTER (debug log + error message)
   Future<bool> login(String phone, String password) async {
@@ -46,12 +66,20 @@ class ApiService {
     }
   }
 
-  // DASHBOARD & PAYMENT
+  // ========== ตัวอย่างการใช้งานแนบ GPS ==========
   Future<List<dynamic>> getInstallments() async {
     final token = await getToken();
+    final gps = await getCurrentLocationMap();
     try {
-      final response = await _dio.get('/installments',
-          options: Options(headers: {'Authorization': 'Bearer $token'}));
+      final response = await _dio.get(
+        '/installments',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+        queryParameters: {
+          'lat': gps['latitude'],
+          'lng': gps['longitude'],
+          'is_mocked': gps['isMocked'],
+        },
+      );
       print("API /installments RESPONSE: ${response.statusCode} | ${response.data}");
       if (response.statusCode == 200) {
         return response.data;
@@ -65,11 +93,20 @@ class ApiService {
     }
   }
 
+  // ทุก API สำคัญควรแนบ GPS เช่นนี้
   Future<dynamic> getDashboardData() async {
     final token = await getToken();
+    final gps = await getCurrentLocationMap();
     try {
-      final response = await _dio.get('/dashboard-data',
-          options: Options(headers: {'Authorization': 'Bearer $token'}));
+      final response = await _dio.get(
+        '/dashboard-data',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+        queryParameters: {
+          'lat': gps['latitude'],
+          'lng': gps['longitude'],
+          'is_mocked': gps['isMocked'],
+        },
+      );
       print("API /dashboard-data RESPONSE: ${response.statusCode} | ${response.data}");
       if (response.statusCode == 200) {
         return response.data;
@@ -83,29 +120,22 @@ class ApiService {
     }
   }
 
-  Future<List<dynamic>> getPaymentHistory() async {
-    final token = await getToken();
-    try {
-      final response = await _dio.get('/payments',
-          options: Options(headers: {'Authorization': 'Bearer $token'}));
-      print("API /payments RESPONSE: ${response.statusCode} | ${response.data}");
-      if (response.statusCode == 200) {
-        return response.data;
-      } else {
-        return [];
-      }
-    } catch (e) {
-      print('Connection Error: $e');
-      return [];
-    }
-  }
+  // เหมือนเดิมสำหรับ getPaymentHistory(), getProfile(), updateProfile() —> เพิ่ม queryParameters หรือแนบ GPS ใน formData ได้เหมือนกัน
 
   // PROFILE
   Future<Map<String, dynamic>?> getProfile() async {
     final token = await getToken();
+    final gps = await getCurrentLocationMap();
     try {
-      final response = await _dio.get('/user/profile',
-          options: Options(headers: {'Authorization': 'Bearer $token'}));
+      final response = await _dio.get(
+        '/user/profile',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+        queryParameters: {
+          'lat': gps['latitude'],
+          'lng': gps['longitude'],
+          'is_mocked': gps['isMocked'],
+        },
+      );
       print("API /user/profile RESPONSE: ${response.statusCode} | ${response.data}");
       if (response.statusCode == 200) {
         if (response.data is Map<String, dynamic>) {
@@ -127,6 +157,7 @@ class ApiService {
     File? idCardImage,
   }) async {
     final token = await getToken();
+    final gps = await getCurrentLocationMap();
     FormData formData = FormData.fromMap({
       ...data,
       if (idCardImage != null)
@@ -134,6 +165,9 @@ class ApiService {
           idCardImage.path,
           filename: idCardImage.path.split('/').last,
         ),
+      'lat': gps['latitude'],
+      'lng': gps['longitude'],
+      'is_mocked': gps['isMocked'],
     });
 
     try {
