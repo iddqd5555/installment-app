@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../main_app.dart';
-// import '../services/api_service.dart';
+import '../services/api_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -17,9 +17,10 @@ class _LoginScreenState extends State<LoginScreen> {
   void login() async {
     setState(() => isLoading = true);
 
-    // เชื่อมต่อกับ ApiService จริง
-    // bool success = await ApiService().login(phoneController.text, passwordController.text);
-    bool success = true; // สำหรับ demo หรือทดสอบ
+    bool success = await ApiService().login(
+      phoneController.text.trim(),
+      passwordController.text.trim(),
+    );
 
     setState(() => isLoading = false);
 
@@ -29,7 +30,8 @@ class _LoginScreenState extends State<LoginScreen> {
         MaterialPageRoute(builder: (_) => MainApp()),
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("เข้าสู่ระบบไม่สำเร็จ!")));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("เข้าสู่ระบบไม่สำเร็จ!")));
     }
   }
 
@@ -43,7 +45,6 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // LOGO + APP NAME
               CircleAvatar(
                 radius: 48,
                 backgroundColor: Colors.amber[700],
@@ -60,8 +61,6 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 8),
               Text("ระบบผ่อนทอง by WisdomGold", style: TextStyle(color: Colors.grey[700])),
               const SizedBox(height: 28),
-
-              // LOGIN FORM
               TextField(
                 controller: phoneController,
                 keyboardType: TextInputType.phone,
