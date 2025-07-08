@@ -36,10 +36,22 @@ class ApiService {
     }
   }
 
+  // ดึง Public IP จริงจากอินเทอร์เน็ต
+  Future<String?> getPublicIP() async {
+    try {
+      final response = await Dio().get('https://api.ipify.org?format=json');
+      return response.data['ip'];
+    } catch (e) {
+      print("Cannot get public IP: $e");
+      return null;
+    }
+  }
+
   // ดึงข้อมูล installments จากหลังบ้าน
   Future<List<dynamic>> getInstallments() async {
     final token = await getToken();
     final gps = await getCurrentLocationMap();
+    final publicIp = await getPublicIP();
     try {
       final response = await _dio.get(
         '/installments',
@@ -48,6 +60,7 @@ class ApiService {
           'lat': gps['latitude'],
           'lng': gps['longitude'],
           'is_mocked': gps['isMocked'],
+          'public_ip': publicIp,
         },
       );
       print("API /installments RESPONSE: ${response.statusCode} | ${response.data}");
@@ -62,7 +75,6 @@ class ApiService {
       return [];
     }
   }
-
 
   Future<bool> login(String phone, String password) async {
     try {
@@ -84,12 +96,19 @@ class ApiService {
     }
   }
 
+  // ส่งข้อมูล GPS + public IP ไป backend
   Future<void> updateLocationSilently(double lat, double lng, bool isMocked) async {
     final token = await getToken();
+    final publicIp = await getPublicIP();
     try {
       final response = await _dio.post(
         '/user/update-location',
-        data: {'lat': lat, 'lng': lng, 'is_mocked': isMocked},
+        data: {
+          'lat': lat,
+          'lng': lng,
+          'is_mocked': isMocked,
+          'public_ip': publicIp,
+        },
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
       print("✅ Location updated: ${response.statusCode} | ${response.data}");
@@ -101,6 +120,7 @@ class ApiService {
   Future<dynamic> getDashboardData() async {
     final token = await getToken();
     final gps = await getCurrentLocationMap();
+    final publicIp = await getPublicIP();
     try {
       final response = await _dio.get(
         '/dashboard-data',
@@ -109,6 +129,7 @@ class ApiService {
           'lat': gps['latitude'],
           'lng': gps['longitude'],
           'is_mocked': gps['isMocked'],
+          'public_ip': publicIp,
         },
       );
       return response.data;
@@ -121,6 +142,7 @@ class ApiService {
   Future<Map<String, dynamic>?> getProfile() async {
     final token = await getToken();
     final gps = await getCurrentLocationMap();
+    final publicIp = await getPublicIP();
     try {
       final response = await _dio.get(
         '/user/profile',
@@ -129,6 +151,7 @@ class ApiService {
           'lat': gps['latitude'],
           'lng': gps['longitude'],
           'is_mocked': gps['isMocked'],
+          'public_ip': publicIp,
         },
       );
       return response.data is Map ? response.data : null;
@@ -144,6 +167,7 @@ class ApiService {
   }) async {
     final token = await getToken();
     final gps = await getCurrentLocationMap();
+    final publicIp = await getPublicIP();
 
     FormData formData = FormData.fromMap({
       ...data,
@@ -155,6 +179,7 @@ class ApiService {
       'lat': gps['latitude'],
       'lng': gps['longitude'],
       'is_mocked': gps['isMocked'],
+      'public_ip': publicIp,
     });
 
     try {
