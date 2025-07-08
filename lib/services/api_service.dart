@@ -36,6 +36,34 @@ class ApiService {
     }
   }
 
+  // ดึงข้อมูล installments จากหลังบ้าน
+  Future<List<dynamic>> getInstallments() async {
+    final token = await getToken();
+    final gps = await getCurrentLocationMap();
+    try {
+      final response = await _dio.get(
+        '/installments',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+        queryParameters: {
+          'lat': gps['latitude'],
+          'lng': gps['longitude'],
+          'is_mocked': gps['isMocked'],
+        },
+      );
+      print("API /installments RESPONSE: ${response.statusCode} | ${response.data}");
+      if (response.statusCode == 200) {
+        return response.data;
+      } else {
+        print('Error from API: ${response.statusCode}');
+        return [];
+      }
+    } catch (e) {
+      print('Connection Error: $e');
+      return [];
+    }
+  }
+
+
   Future<bool> login(String phone, String password) async {
     try {
       final response = await _dio.post('/login', data: {
