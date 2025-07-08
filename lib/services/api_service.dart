@@ -93,6 +93,21 @@ class ApiService {
     }
   }
 
+  // อัปเดตตำแหน่งล่าสุดของ user แบบ background
+  Future<void> updateLocationSilently(double lat, double lng) async {
+    final token = await getToken();
+    try {
+      await _dio.post(
+        '/user/update-location',
+        data: {'lat': lat, 'lng': lng},
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+    } catch (e) {
+      print("GPS silent update failed: $e");
+    }
+  }
+
+
   // ทุก API สำคัญควรแนบ GPS เช่นนี้
   Future<dynamic> getDashboardData() async {
     final token = await getToken();
