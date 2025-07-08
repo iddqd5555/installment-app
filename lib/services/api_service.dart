@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   final Dio _dio = Dio();
-  final String baseUrl = 'http://192.168.1.43:8000/api';
+  final String baseUrl = 'http://192.168.1.35:8000/api';
 
   ApiService() {
     _dio.options.baseUrl = baseUrl;
@@ -15,36 +15,44 @@ class ApiService {
   // ดึง token ที่ save ไว้
   Future<String> getToken() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('token') ?? '';
+    String? token = prefs.getString('token');
+    print("GET TOKEN FROM PREF: $token");
+    return token ?? '';
   }
 
-  // ———————— LOGIN/REGISTER ————————
+  // LOGIN/REGISTER (debug log + error message)
   Future<bool> login(String phone, String password) async {
     try {
+      print("API LOGIN: $phone / $password");
       final response = await _dio.post('/login', data: {
         'phone': phone,
         'password': password,
       });
 
-      if (response.statusCode == 200) {
+      print("API LOGIN RESPONSE: ${response.statusCode} | ${response.data}");
+
+      if (response.statusCode == 200 && response.data['token'] != null) {
         final token = response.data['token'];
         final prefs = await SharedPreferences.getInstance();
         prefs.setString('token', token);
+        print("TOKEN SAVED: $token");
         return true;
       }
+      print("LOGIN FAIL: ${response.statusCode} | ${response.data}");
       return false;
     } catch (e) {
-      print(e);
+      print("API LOGIN ERROR: $e");
       return false;
     }
   }
 
-  // ———————— DASHBOARD & PAYMENT ————————
+  // DASHBOARD & PAYMENT
   Future<List<dynamic>> getInstallments() async {
     final token = await getToken();
     try {
       final response = await _dio.get('/installments',
           options: Options(headers: {'Authorization': 'Bearer $token'}));
+      print("API /installments RESPONSE: ${response.statusCode} | ${response.data}");
       if (response.statusCode == 200) {
         return response.data;
       } else {
@@ -62,6 +70,7 @@ class ApiService {
     try {
       final response = await _dio.get('/dashboard-data',
           options: Options(headers: {'Authorization': 'Bearer $token'}));
+      print("API /dashboard-data RESPONSE: ${response.statusCode} | ${response.data}");
       if (response.statusCode == 200) {
         return response.data;
       } else {
@@ -79,6 +88,7 @@ class ApiService {
     try {
       final response = await _dio.get('/payments',
           options: Options(headers: {'Authorization': 'Bearer $token'}));
+      print("API /payments RESPONSE: ${response.statusCode} | ${response.data}");
       if (response.statusCode == 200) {
         return response.data;
       } else {
@@ -90,15 +100,14 @@ class ApiService {
     }
   }
 
-  // ———————— PROFILE ————————
-  // ดึงข้อมูลโปรไฟล์
+  // PROFILE
   Future<Map<String, dynamic>?> getProfile() async {
     final token = await getToken();
     try {
       final response = await _dio.get('/user/profile',
           options: Options(headers: {'Authorization': 'Bearer $token'}));
+      print("API /user/profile RESPONSE: ${response.statusCode} | ${response.data}");
       if (response.statusCode == 200) {
-        // ถ้า Laravel ส่ง user object มาตรง ๆ
         if (response.data is Map<String, dynamic>) {
           return response.data;
         } else if (response.data is String) {
@@ -138,6 +147,7 @@ class ApiService {
           },
         ),
       );
+      print("API /user/profile/update RESPONSE: ${response.statusCode} | ${response.data}");
       return response.statusCode == 200;
     } catch (e) {
       print('Update profile error: $e');
@@ -145,9 +155,8 @@ class ApiService {
     }
   }
 
-  // ———— GET IMAGE URL (สำหรับรูปโปรไฟล์ที่เป็นไฟล์) ————
+  // GET IMAGE URL (สำหรับรูปโปรไฟล์ที่เป็นไฟล์)
   String getImageUrl(String filename) {
-    // ถ้า storage link แล้ว รูปจะอยู่ที่ /storage/uploads/filename
-    return 'http://192.168.1.43:8000/storage/uploads/$filename';
+    return 'http://192.168.1.35:8000/storage/uploads/$filename';
   }
 }

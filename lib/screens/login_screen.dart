@@ -13,14 +13,20 @@ class _LoginScreenState extends State<LoginScreen> {
   final phoneController = TextEditingController();
   final passwordController = TextEditingController();
   bool isLoading = false;
+  String? errorMessage;
 
   void login() async {
-    setState(() => isLoading = true);
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
 
+    print("LOGIN TRY: ${phoneController.text} / ${passwordController.text}");
     bool success = await ApiService().login(
       phoneController.text.trim(),
       passwordController.text.trim(),
     );
+    print("LOGIN RESULT: $success");
 
     setState(() => isLoading = false);
 
@@ -30,8 +36,12 @@ class _LoginScreenState extends State<LoginScreen> {
         MaterialPageRoute(builder: (_) => MainApp()),
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("เข้าสู่ระบบไม่สำเร็จ!")));
+      setState(() {
+        errorMessage = "เข้าสู่ระบบไม่สำเร็จ!";
+      });
+      print("LOGIN FAILED");
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(errorMessage!)));
     }
   }
 
@@ -97,6 +107,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   onPressed: isLoading ? null : login,
                 ),
               ),
+              if (errorMessage != null) ...[
+                const SizedBox(height: 18),
+                Text(errorMessage!, style: const TextStyle(color: Colors.red)),
+              ],
               const SizedBox(height: 12),
               TextButton(
                 child: Text("ลืมรหัสผ่าน?", style: TextStyle(color: Colors.red[900])),
