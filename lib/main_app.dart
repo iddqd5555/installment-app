@@ -26,32 +26,6 @@ class _MainAppState extends State<MainApp> {
   void initState() {
     super.initState();
     _ensureLocationPermission();
-    _sendLocationIfSafe();
-  }
-
-  Future<void> _sendLocationIfSafe() async {
-    try {
-      final pos = await Geolocator.getCurrentPosition();
-      // 1. Block emulator/mock location
-      if (pos.isMocked) {
-        _showErrorDialog('ไม่สามารถใช้งานได้: ตรวจพบการจำลองตำแหน่ง (Mock Location)\nกรุณาใช้กับมือถือจริงเท่านั้น');
-        return;
-      }
-      // 2. Block พิกัดที่อยู่นอกประเทศไทย (lat/lng ไม่อยู่ในขอบเขตไทย)
-      if (!_isInThailand(pos.latitude, pos.longitude)) {
-        _showErrorDialog('พิกัดของคุณอยู่นอกประเทศไทย กรุณาปิด VPN หรือจำลองตำแหน่ง แล้วลองใหม่');
-        return;
-      }
-      // 3. อัปเดตพิกัดขึ้น backend
-      await ApiService().updateLocationSilently(pos.latitude, pos.longitude);
-    } catch (e) {
-      print("GPS error: $e");
-    }
-  }
-
-  bool _isInThailand(double lat, double lng) {
-    // ประมาณขอบเขตประเทศไทย
-    return (lat >= 5.0 && lat <= 21.0) && (lng >= 97.0 && lng <= 106.0);
   }
 
   Future<void> _ensureLocationPermission() async {
@@ -69,7 +43,6 @@ class _MainAppState extends State<MainApp> {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
         await _showErrorDialog('คุณต้องอนุญาตแชร์ตำแหน่งจึงจะใช้งานแอปได้');
-        _ensureLocationPermission();
         return;
       }
     }
@@ -79,12 +52,17 @@ class _MainAppState extends State<MainApp> {
       return;
     }
 
+    _sendLocationSilently(); // เรียกทันทีหลังได้ permission
+  }
+
+  Future<void> _sendLocationSilently() async {
     try {
-      Position position = await Geolocator.getCurrentPosition();
-      if (position.isMocked) {
-        await _showErrorDialog('พบการจำลองตำแหน่ง (Mock Location)\nหากใช้ VPN หรือ App จำลอง กรุณาปิดก่อน');
-      }
-    } catch (e) {}
+      final pos = await Geolocator.getCurrentPosition();
+      print("📍 GPS obtained: ${pos.latitude}, ${pos.longitude}, Mocked: ${pos.isMocked}");
+      await ApiService().updateLocationSilently(pos.latitude, pos.longitude, pos.isMocked);
+    } catch (e) {
+      print("🚨 GPS error: $e");
+    }
   }
 
   Future<void> _showErrorDialog(String message) async {
