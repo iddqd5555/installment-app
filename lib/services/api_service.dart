@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   final Dio _dio = Dio();
-  final String baseUrl = 'http://192.168.1.35:8000/api';
+  final String baseUrl = 'http://192.168.1.36:8000/api';
 
   ApiService() {
     _dio.options.baseUrl = baseUrl;
@@ -157,6 +157,6 @@ class ApiService {
 
   // GET IMAGE URL (สำหรับรูปโปรไฟล์ที่เป็นไฟล์)
   String getImageUrl(String filename) {
-    return 'http://192.168.1.35:8000/storage/uploads/$filename';
+    return 'http://192.168.1.36:8000/storage/uploads/$filename';
   }
 }

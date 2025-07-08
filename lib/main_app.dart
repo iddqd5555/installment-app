@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/installments_screen.dart';
 import 'screens/payment_screen.dart';
-import 'screens/profile_screen.dart';
+import 'screens/profile_menu_screen.dart';
+
 
 class MainApp extends StatefulWidget {
   const MainApp({super.key});
@@ -17,7 +18,7 @@ class _MainAppState extends State<MainApp> {
     DashboardScreen(),
     InstallmentsScreen(),
     PaymentScreen(),
-    ProfileScreen(),
+    ProfileMenuScreen(),
   ];
 
   void _onItemTapped(int index) {

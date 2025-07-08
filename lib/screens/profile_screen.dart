@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-
 import '../services/api_service.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -36,9 +35,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
     try {
       final data = await apiService.getProfile();
+      print("GET PROFILE RESPONSE: $data");
       if (data == null) {
         setState(() {
-          errorMessage = "โหลดข้อมูลโปรไฟล์ไม่สำเร็จ กรุณาลองใหม่";
+          errorMessage = "โหลดข้อมูลโปรไฟล์ไม่สำเร็จ";
           isLoading = false;
         });
         return;
@@ -126,7 +126,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: fetchProfile,
-                child: const Text("ลองโหลดใหม่"),
+                child: const Text("โหลดใหม่"),
               )
             ],
           ),
@@ -172,14 +172,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   backgroundImage: idCardImage != null
                       ? FileImage(idCardImage!)
                       : ((profile?['id_card_image'] ?? '').toString().isNotEmpty)
-                        ? NetworkImage(apiService.getImageUrl(profile?['id_card_image']))
-                        : const AssetImage("assets/images/idcard_placeholder.png") as ImageProvider,
+                          ? NetworkImage(apiService.getImageUrl(profile?['id_card_image']))
+                          : const AssetImage("assets/images/idcard_placeholder.png") as ImageProvider,
                 ),
               ),
             ),
             const SizedBox(height: 24),
 
-            // ข้อมูลส่วนตัว
             TextFormField(
               initialValue: profile?['first_name'] ?? "",
               enabled: isEditing,
