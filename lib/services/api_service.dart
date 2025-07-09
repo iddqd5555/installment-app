@@ -81,6 +81,7 @@ class ApiService {
       final response = await _dio.post('/login', data: {
         'phone': phone,
         'password': password,
+        'client_time': DateTime.now().toUtc().toIso8601String(), // ส่งเวลาปัจจุบัน (UTC)
       });
 
       if (response.statusCode == 200 && response.data['token'] != null) {
@@ -96,10 +97,11 @@ class ApiService {
     }
   }
 
-  // ส่งข้อมูล GPS + public IP ไป backend
+  // ส่งข้อมูล GPS + public IP + เวลาปัจจุบันแบบ UTC ไป backend
   Future<void> updateLocationSilently(double lat, double lng, bool isMocked) async {
     final token = await getToken();
     final publicIp = await getPublicIP();
+    final nowUtc = DateTime.now().toUtc().toIso8601String(); // เวลาปัจจุบัน UTC
     try {
       final response = await _dio.post(
         '/user/update-location',
@@ -108,6 +110,7 @@ class ApiService {
           'lng': lng,
           'is_mocked': isMocked,
           'public_ip': publicIp,
+          'client_time': nowUtc, // ส่งไปหลังบ้านทุกครั้ง
         },
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
@@ -180,6 +183,7 @@ class ApiService {
       'lng': gps['longitude'],
       'is_mocked': gps['isMocked'],
       'public_ip': publicIp,
+      'client_time': DateTime.now().toUtc().toIso8601String(), // ส่งไปทุก API ที่บันทึก!
     });
 
     try {
