@@ -27,9 +27,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   fetchDashboard() async {
-    setState(() { isLoading = true; errorMessage = null; });
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
     try {
       final data = await apiService.getDashboardData();
+      print("DASHBOARD RESPONSE: $data"); // <-- เพิ่มบรรทัดนี้
       if (data == null) {
         setState(() {
           errorMessage = "โหลดข้อมูล dashboard ไม่สำเร็จ หรือ Token ผิด";
