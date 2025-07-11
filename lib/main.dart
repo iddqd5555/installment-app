@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'screens/login_screen.dart';
-// import 'screens/qr_payment_screen.dart'; // ถ้าไม่ได้ใช้ที่ main ให้คอมเมนต์ออก
+import 'screens/installment_dashboard_screen.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -13,7 +12,8 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Installment App',
-      home: LoginScreen(), // เริ่มต้นจากหน้า Login
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: InstallmentDashboardScreen(installmentRequestId: 1), // ปรับ id ตาม user จริง
     );
   }
 }

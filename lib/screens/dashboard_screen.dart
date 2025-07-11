@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import 'package:intl/intl.dart';
+import 'installment_dashboard_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -15,6 +16,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool isLoading = true;
   List<dynamic> paymentHistory = [];
   String? errorMessage;
+  int _selectedIndex = 0;
+
+  // ตัวอย่าง: id สัญญาที่ต้องการส่งไปยังจ่ายเงิน
+  int? installmentRequestId;
 
   @override
   void initState() {
@@ -39,6 +44,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       setState(() {
         dashboardData = data;
         paymentHistory = data['payment_history'] ?? [];
+        // ใส่ id จริงตามที่ backend ส่งมา
+        installmentRequestId = data['installment_request_id'] ?? 1;
         isLoading = false;
       });
     } catch (e) {
@@ -104,6 +111,179 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  // ====================== Main Menu Page ======================
+  Widget _buildMainDashboard() {
+    return isLoading
+        ? const Center(child: CircularProgressIndicator())
+        : (errorMessage != null)
+            ? Center(
+                child: Text(
+                  errorMessage!,
+                  style: const TextStyle(fontSize: 18, color: Colors.red),
+                ),
+              )
+            : (dashboardData == null || dashboardData.isEmpty)
+                ? const Center(
+                    child: Text(
+                      "ไม่มีข้อมูลการผ่อน",
+                      style: TextStyle(fontSize: 18),
+                    ),
+                  )
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Card(
+                          elevation: 4,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '📌 ผ่อนทองจำนวน: ${dashboardData?['gold_amount'] ?? '-'} บาททอง',
+                                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                ),
+                                const Divider(height: 20, thickness: 1),
+                                detailRow(Icons.payment, 'ยอดที่ต้องชำระวันนี้', '${parseNumber(dashboardData?['due_today']).toStringAsFixed(2)} บาท'),
+                                detailRow(Icons.account_balance_wallet, 'ยอดชำระล่วงหน้า', '${parseNumber(dashboardData?['advance_payment']).toStringAsFixed(2)} บาท'),
+                                detailRow(Icons.calendar_today, 'วันชำระครั้งถัดไป', dashboardData?['next_payment_date'] ?? '-'),
+                                detailRow(Icons.warning, 'ค่าปรับสะสม', '${parseNumber(dashboardData?['total_penalty']).toStringAsFixed(2)} บาท'),
+                                const Divider(height: 20, thickness: 1),
+                                const Text('💰 ชำระแล้วทั้งหมด', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                const SizedBox(height: 8),
+                                LinearProgressIndicator(
+                                  value: parseNumber(dashboardData?['total_installment_amount']) != 0
+                                      ? parseNumber(dashboardData?['total_paid']) / parseNumber(dashboardData?['total_installment_amount'])
+                                      : 0,
+                                  backgroundColor: Colors.grey[300],
+                                  color: Colors.green,
+                                  minHeight: 12,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                const SizedBox(height: 8),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: Text(
+                                    '${parseNumber(dashboardData?['total_paid']).toStringAsFixed(2)} / ${parseNumber(dashboardData?['total_installment_amount']).toStringAsFixed(2)} บาท (${((parseNumber(dashboardData?['total_paid']) / (parseNumber(dashboardData?['total_installment_amount']) == 0 ? 1 : parseNumber(dashboardData?['total_installment_amount'])) ) * 100).toStringAsFixed(2)}%)',
+                                    style: const TextStyle(fontSize: 14),
+                                  ),
+                                ),
+                                const Divider(height: 20, thickness: 1),
+                                Builder(
+                                  builder: (_) {
+                                    int installmentPeriod = int.tryParse('${dashboardData?['installment_period'] ?? 1}') ?? 1;
+                                    int daysPassed = int.tryParse('${dashboardData?['days_passed'] ?? 0}') ?? 0;
+                                    double timeProgress = installmentPeriod != 0 ? daysPassed / installmentPeriod : 0;
+                                    return Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          '⏳ ระยะเวลาการผ่อน: $daysPassed / $installmentPeriod วัน',
+                                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        LinearProgressIndicator(
+                                          value: timeProgress,
+                                          backgroundColor: Colors.grey[300],
+                                          color: Colors.blue,
+                                          minHeight: 12,
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        Align(
+                                          alignment: Alignment.centerRight,
+                                          child: Text('${(timeProgress * 100).toStringAsFixed(2)}%', style: const TextStyle(fontSize: 14)),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Card(
+                          elevation: 2,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('📋 ประวัติการชำระเงินล่าสุด', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+                                const Divider(height: 18),
+                                if (paymentHistory.isEmpty)
+                                  const Text("ยังไม่มีประวัติการชำระ", style: TextStyle(color: Colors.grey)),
+                                ...paymentHistory.map((p) => Container(
+                                  margin: const EdgeInsets.symmetric(vertical: 8),
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[100],
+                                    borderRadius: BorderRadius.circular(14),
+                                    boxShadow: [const BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0,1))]
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(getStatusIcon(p['status']), color: getStatusColor(p['status']), size: 30),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text("${parseNumber(p['amount_paid']?.toString()).toStringAsFixed(2)} บาท",
+                                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                                            Text(formatDate(p['payment_due_date']), style: TextStyle(color: Colors.grey[700], fontSize: 13)),
+                                          ],
+                                        ),
+                                      ),
+                                      Row(
+                                        children: [
+                                          Icon(getStatusIcon(p['status']), color: getStatusColor(p['status'])),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            getStatusText(p['status']),
+                                            style: TextStyle(
+                                              color: getStatusColor(p['status']),
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                )),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+  }
+
+  // ====================== Bottom Navigation Menu ======================
+  Widget _buildBody() {
+    if (_selectedIndex == 0) {
+      return _buildMainDashboard();
+    }
+    if (_selectedIndex == 1) {
+      // “ชำระเงิน” (เรียกหน้าชำระเงิน/อัพสลิป)
+      if (installmentRequestId == null) {
+        return const Center(child: Text("ไม่พบข้อมูลสัญญา"));
+      }
+      return InstallmentDashboardScreen(installmentRequestId: installmentRequestId!);
+    }
+    if (_selectedIndex == 2) {
+      // โปรไฟล์หรือหน้าอื่น ๆ ในอนาคต
+      return const Center(child: Text("ยังไม่เปิดใช้ (กำลังพัฒนา)"));
+    }
+    return Container();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -111,156 +291,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
         backgroundColor: Colors.red[900],
         title: const Text('📊 Dashboard การผ่อนของคุณ', style: TextStyle(color: Colors.white)),
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : (errorMessage != null)
-              ? Center(
-                  child: Text(
-                    errorMessage!,
-                    style: const TextStyle(fontSize: 18, color: Colors.red),
-                  ),
-                )
-              : (dashboardData == null || dashboardData.isEmpty)
-                  ? const Center(
-                      child: Text(
-                        "ไม่มีข้อมูลการผ่อน",
-                        style: TextStyle(fontSize: 18),
-                      ),
-                    )
-                  : SingleChildScrollView(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Card(
-                            elevation: 4,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    '📌 ผ่อนทองจำนวน: ${dashboardData?['gold_amount'] ?? '-'} บาททอง',
-                                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                                  ),
-                                  const Divider(height: 20, thickness: 1),
-                                  detailRow(Icons.payment, 'ยอดที่ต้องชำระวันนี้', '${parseNumber(dashboardData?['due_today']).toStringAsFixed(2)} บาท'),
-                                  detailRow(Icons.account_balance_wallet, 'ยอดชำระล่วงหน้า', '${parseNumber(dashboardData?['advance_payment']).toStringAsFixed(2)} บาท'),
-                                  detailRow(Icons.calendar_today, 'วันชำระครั้งถัดไป', dashboardData?['next_payment_date'] ?? '-'),
-                                  detailRow(Icons.warning, 'ค่าปรับสะสม', '${parseNumber(dashboardData?['total_penalty']).toStringAsFixed(2)} บาท'),
-                                  const Divider(height: 20, thickness: 1),
-                                  const Text('💰 ชำระแล้วทั้งหมด', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                                  const SizedBox(height: 8),
-                                  LinearProgressIndicator(
-                                    value: parseNumber(dashboardData?['total_installment_amount']) != 0
-                                        ? parseNumber(dashboardData?['total_paid']) / parseNumber(dashboardData?['total_installment_amount'])
-                                        : 0,
-                                    backgroundColor: Colors.grey[300],
-                                    color: Colors.green,
-                                    minHeight: 12,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Align(
-                                    alignment: Alignment.centerRight,
-                                    child: Text(
-                                      '${parseNumber(dashboardData?['total_paid']).toStringAsFixed(2)} / ${parseNumber(dashboardData?['total_installment_amount']).toStringAsFixed(2)} บาท (${((parseNumber(dashboardData?['total_paid']) / (parseNumber(dashboardData?['total_installment_amount']) == 0 ? 1 : parseNumber(dashboardData?['total_installment_amount'])) ) * 100).toStringAsFixed(2)}%)',
-                                      style: const TextStyle(fontSize: 14),
-                                    ),
-                                  ),
-                                  const Divider(height: 20, thickness: 1),
-                                  Builder(
-                                    builder: (_) {
-                                      int installmentPeriod = int.tryParse('${dashboardData?['installment_period'] ?? 1}') ?? 1;
-                                      int daysPassed = int.tryParse('${dashboardData?['days_passed'] ?? 0}') ?? 0;
-                                      double timeProgress = installmentPeriod != 0 ? daysPassed / installmentPeriod : 0;
-                                      return Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            '⏳ ระยะเวลาการผ่อน: $daysPassed / $installmentPeriod วัน',
-                                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          LinearProgressIndicator(
-                                            value: timeProgress,
-                                            backgroundColor: Colors.grey[300],
-                                            color: Colors.blue,
-                                            minHeight: 12,
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          Align(
-                                            alignment: Alignment.centerRight,
-                                            child: Text('${(timeProgress * 100).toStringAsFixed(2)}%', style: const TextStyle(fontSize: 14)),
-                                          ),
-                                        ],
-                                      );
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                          Card(
-                            elevation: 2,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text('📋 ประวัติการชำระเงินล่าสุด', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
-                                  const Divider(height: 18),
-                                  if (paymentHistory.isEmpty)
-                                    const Text("ยังไม่มีประวัติการชำระ", style: TextStyle(color: Colors.grey)),
-                                  ...paymentHistory.map((p) => Container(
-                                    margin: const EdgeInsets.symmetric(vertical: 8),
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey[100],
-                                      borderRadius: BorderRadius.circular(14),
-                                      boxShadow: [const BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0,1))]
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Icon(getStatusIcon(p['status']), color: getStatusColor(p['status']), size: 30),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text("${parseNumber(p['amount_paid']?.toString()).toStringAsFixed(2)} บาท",
-                                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                                              Text(formatDate(p['payment_due_date']), style: TextStyle(color: Colors.grey[700], fontSize: 13)),
-                                            ],
-                                          ),
-                                        ),
-                                        Row(
-                                          children: [
-                                            Icon(getStatusIcon(p['status']), color: getStatusColor(p['status'])),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              getStatusText(p['status']),
-                                              style: TextStyle(
-                                                color: getStatusColor(p['status']),
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 13
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  )),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+      body: _buildBody(),
+      bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: Colors.white,
+        currentIndex: _selectedIndex,
+        selectedItemColor: Colors.red[800],
+        unselectedItemColor: Colors.grey[700],
+        onTap: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'หน้าหลัก'),
+          BottomNavigationBarItem(icon: Icon(Icons.payments), label: 'ชำระเงิน'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'โปรไฟล์'),
+        ],
+      ),
     );
   }
 

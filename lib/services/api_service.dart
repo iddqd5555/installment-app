@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   final Dio _dio = Dio();
-  final String baseUrl = 'http://192.168.1.151:8000/api'; // เปลี่ยนตรงนี้ถ้า server เปลี่ยน
+  final String baseUrl = 'http://172.20.10.2:8000/api'; // เปลี่ยนตรงนี้ถ้า server เปลี่ยน
 
   ApiService() {
     _dio.options.baseUrl = baseUrl;
