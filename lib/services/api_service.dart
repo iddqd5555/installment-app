@@ -51,6 +51,11 @@ class ApiService {
     }
   }
 
+  Future<void> clearToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('token');
+  }
+
   // GET Installments (แนบ GPS + public IP ไปด้วย)
   Future<List<dynamic>> getInstallments() async {
     final token = await getToken();

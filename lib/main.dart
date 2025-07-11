@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'screens/installment_dashboard_screen.dart';
+import 'services/api_service.dart';
+import 'screens/login_screen.dart';
+import 'screens/dashboard_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -7,13 +9,20 @@ void main() {
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Installment App',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: InstallmentDashboardScreen(installmentRequestId: 1), // ปรับ id ตาม user จริง
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(primarySwatch: Colors.red),
+      home: FutureBuilder<String>(
+        future: ApiService().getToken(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          final token = snapshot.data ?? '';
+          return token.isEmpty ? const LoginScreen() : const DashboardScreen();
+        },
+      ),
     );
   }
 }

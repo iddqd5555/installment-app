@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../main_app.dart';
 import '../services/api_service.dart';
+import 'dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -21,27 +21,25 @@ class _LoginScreenState extends State<LoginScreen> {
       errorMessage = null;
     });
 
-    print("LOGIN TRY: ${phoneController.text} / ${passwordController.text}");
     bool success = await ApiService().login(
       phoneController.text.trim(),
       passwordController.text.trim(),
     );
-    print("LOGIN RESULT: $success");
 
     setState(() => isLoading = false);
 
     if (success) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => MainApp()),
+        MaterialPageRoute(builder: (_) => const DashboardScreen()),
       );
     } else {
       setState(() {
         errorMessage = "เข้าสู่ระบบไม่สำเร็จ!";
       });
-      print("LOGIN FAILED");
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(errorMessage!)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(errorMessage!)),
+      );
     }
   }
 
@@ -94,10 +92,12 @@ class _LoginScreenState extends State<LoginScreen> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  icon: isLoading ? SizedBox(
-                    width: 22, height: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                  ) : Icon(Icons.login, color: Colors.white),
+                  icon: isLoading
+                      ? SizedBox(
+                          width: 22, height: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : Icon(Icons.login, color: Colors.white),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red[900],
                     padding: EdgeInsets.symmetric(vertical: 16),

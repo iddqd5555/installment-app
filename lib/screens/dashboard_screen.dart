@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import 'package:intl/intl.dart';
 import 'installment_dashboard_screen.dart';
+import 'login_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -17,8 +18,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List<dynamic> paymentHistory = [];
   String? errorMessage;
   int _selectedIndex = 0;
-
-  // ตัวอย่าง: id สัญญาที่ต้องการส่งไปยังจ่ายเงิน
   int? installmentRequestId;
 
   @override
@@ -28,10 +27,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   fetchDashboard() async {
-    setState(() {
-      isLoading = true;
-      errorMessage = null;
-    });
+    setState(() { isLoading = true; errorMessage = null; });
     try {
       final data = await apiService.getDashboardData();
       if (data == null) {
@@ -44,7 +40,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       setState(() {
         dashboardData = data;
         paymentHistory = data['payment_history'] ?? [];
-        // ใส่ id จริงตามที่ backend ส่งมา
         installmentRequestId = data['installment_request_id'] ?? 1;
         isLoading = false;
       });
@@ -111,23 +106,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  // ====================== Main Menu Page ======================
+  Future<void> doLogout() async {
+    await apiService.clearToken();
+    if (!mounted) return;
+    Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false);
+  }
+
   Widget _buildMainDashboard() {
     return isLoading
         ? const Center(child: CircularProgressIndicator())
         : (errorMessage != null)
             ? Center(
-                child: Text(
-                  errorMessage!,
-                  style: const TextStyle(fontSize: 18, color: Colors.red),
-                ),
+                child: Text(errorMessage!, style: const TextStyle(fontSize: 18, color: Colors.red)),
               )
             : (dashboardData == null || dashboardData.isEmpty)
                 ? const Center(
-                    child: Text(
-                      "ไม่มีข้อมูลการผ่อน",
-                      style: TextStyle(fontSize: 18),
-                    ),
+                    child: Text("ไม่มีข้อมูลการผ่อน", style: TextStyle(fontSize: 18)),
                   )
                 : SingleChildScrollView(
                     padding: const EdgeInsets.all(16),
@@ -265,21 +259,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   );
   }
 
-  // ====================== Bottom Navigation Menu ======================
   Widget _buildBody() {
     if (_selectedIndex == 0) {
       return _buildMainDashboard();
     }
     if (_selectedIndex == 1) {
-      // “ชำระเงิน” (เรียกหน้าชำระเงิน/อัพสลิป)
       if (installmentRequestId == null) {
         return const Center(child: Text("ไม่พบข้อมูลสัญญา"));
       }
       return InstallmentDashboardScreen(installmentRequestId: installmentRequestId!);
     }
     if (_selectedIndex == 2) {
-      // โปรไฟล์หรือหน้าอื่น ๆ ในอนาคต
-      return const Center(child: Text("ยังไม่เปิดใช้ (กำลังพัฒนา)"));
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text("ออกจากระบบ", style: TextStyle(fontSize: 20)),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: doLogout,
+              icon: const Icon(Icons.logout),
+              label: const Text("Logout / ออกจากระบบ"),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            ),
+          ],
+        ),
+      );
     }
     return Container();
   }
@@ -298,14 +303,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         selectedItemColor: Colors.red[800],
         unselectedItemColor: Colors.grey[700],
         onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
+          setState(() { _selectedIndex = index; });
         },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'หน้าหลัก'),
           BottomNavigationBarItem(icon: Icon(Icons.payments), label: 'ชำระเงิน'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'โปรไฟล์'),
+          BottomNavigationBarItem(icon: Icon(Icons.logout), label: 'ออกจากระบบ'),
         ],
       ),
     );
