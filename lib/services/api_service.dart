@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:geolocator/geolocator.dart';
@@ -6,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   final Dio _dio = Dio();
-  final String baseUrl = 'http://172.20.10.2:8000/api'; // เปลี่ยนตามเซิร์ฟเวอร์ของคุณ
+  final String baseUrl = 'http://172.20.10.2:8000/api';
 
   ApiService() {
     _dio.options.baseUrl = baseUrl;
@@ -43,7 +42,80 @@ class ApiService {
   }
 
   Future<String?> getPublicIP() async {
-    return '127.0.0.1'; // ปรับได้ตามที่ต้องการ
+    return '127.0.0.1';
+  }
+
+  // ====== Upload Slip (NEW!) ======
+  Future<bool> uploadSlip({
+    required int installmentPaymentId,
+    required File paymentProof,
+    required double amountPaid,
+    required String slipHash,
+  }) async {
+    final token = await getToken();
+    final gps = await getCurrentLocationMap();
+    final publicIp = await getPublicIP();
+
+    FormData formData = FormData.fromMap({
+      'installment_payment_id': installmentPaymentId,
+      'amount_paid': amountPaid,
+      'slip_hash': slipHash,
+      'payment_proof': await MultipartFile.fromFile(paymentProof.path),
+      'lat': gps['latitude'],
+      'lng': gps['longitude'],
+      'is_mocked': gps['isMocked'],
+      'public_ip': publicIp,
+      'client_time': DateTime.now().toUtc().toIso8601String(),
+    });
+
+    try {
+      final response = await _dio.post(
+        '/confirm-slip',
+        data: formData,
+        options: Options(headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'multipart/form-data',
+        }),
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      print('Upload Slip Error: $e');
+      return false;
+    }
+  }
+
+  // ====== Confirm QR Payment (NEW!) ======
+  Future<bool> confirmQrPayment({
+    required int installmentPaymentId,
+    required String qrRef,
+    required double amountPaid,
+  }) async {
+    final token = await getToken();
+    final gps = await getCurrentLocationMap();
+    final publicIp = await getPublicIP();
+
+    try {
+      final response = await _dio.post(
+        '/confirm-qr',
+        data: {
+          'installment_payment_id': installmentPaymentId,
+          'qr_ref': qrRef,
+          'amount_paid': amountPaid,
+          'lat': gps['latitude'],
+          'lng': gps['longitude'],
+          'is_mocked': gps['isMocked'],
+          'public_ip': publicIp,
+          'client_time': DateTime.now().toUtc().toIso8601String(),
+        },
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      print('Confirm QR Error: $e');
+      return false;
+    }
   }
 
   // ====== สัญญา (Installment Requests) ======
@@ -62,34 +134,9 @@ class ApiService {
           'public_ip': publicIp,
         },
       );
-      print("API /installments RESPONSE: ${response.statusCode} | ${response.data}");
-      if (response.statusCode == 200) {
-        return response.data;
-      } else {
-        return [];
-      }
+      return response.data;
     } catch (e) {
       print('Connection Error: $e');
-      return [];
-    }
-  }
-
-  // ====== ประวัติงวดผ่อน/จ่าย (Installment Payments) ======
-  Future<List<dynamic>> getInstallmentPayments(int installmentRequestId) async {
-    final token = await getToken();
-    try {
-      final response = await _dio.get(
-        '/installment/history',
-        queryParameters: {'installment_request_id': installmentRequestId},
-        options: Options(headers: {'Authorization': 'Bearer $token'}),
-      );
-      print("API /installment/history RESPONSE: ${response.statusCode} | ${response.data}");
-      if (response.statusCode == 200 && response.data['history'] != null) {
-        return response.data['history'];
-      }
-      return [];
-    } catch (e) {
-      print('Error getInstallmentPayments: $e');
       return [];
     }
   }
@@ -109,48 +156,15 @@ class ApiService {
         'is_mocked': gps['isMocked'],
       });
 
-      print("API /login RESPONSE: ${response.statusCode} | ${response.data}");
-
       if (response.statusCode == 200 && response.data['token'] != null) {
-        final token = response.data['token'];
         final prefs = await SharedPreferences.getInstance();
-        prefs.setString('token', token);
+        prefs.setString('token', response.data['token']);
         return true;
       }
       return false;
     } catch (e) {
       print("Login error: $e");
-      if (e is DioException) {
-        print("DioException response: ${e.response}");
-        print("DioException type: ${e.type}");
-        print("DioException message: ${e.message}");
-        print("DioException data: ${e.response?.data}");
-        print("DioException status: ${e.response?.statusCode}");
-      }
       return false;
-    }
-  }
-
-  // ====== Update User Location (GPS) ======
-  Future<void> updateLocationSilently(double lat, double lng, bool isMocked) async {
-    final token = await getToken();
-    final publicIp = await getPublicIP();
-    final nowUtc = DateTime.now().toUtc().toIso8601String();
-    try {
-      final response = await _dio.post(
-        '/user/update-location',
-        data: {
-          'lat': lat,
-          'lng': lng,
-          'is_mocked': isMocked,
-          'public_ip': publicIp,
-          'client_time': nowUtc,
-        },
-        options: Options(headers: {'Authorization': 'Bearer $token'}),
-      );
-      print("✅ Location updated: ${response.statusCode} | ${response.data}");
-    } catch (e) {
-      print("🚨 GPS update failed: $e");
     }
   }
 
@@ -170,7 +184,6 @@ class ApiService {
           'public_ip': publicIp,
         },
       );
-      print("API /dashboard-data RESPONSE: ${response.statusCode} | ${response.data}");
       return response.data;
     } catch (e) {
       print('Dashboard error: $e');
@@ -181,21 +194,10 @@ class ApiService {
   // ====== Profile ======
   Future<Map<String, dynamic>?> getProfile() async {
     final token = await getToken();
-    final gps = await getCurrentLocationMap();
-    final publicIp = await getPublicIP();
     try {
-      final response = await _dio.get(
-        '/user/profile',
-        options: Options(headers: {'Authorization': 'Bearer $token'}),
-        queryParameters: {
-          'lat': gps['latitude'],
-          'lng': gps['longitude'],
-          'is_mocked': gps['isMocked'],
-          'public_ip': publicIp,
-        },
-      );
-      print("API /user/profile RESPONSE: ${response.statusCode} | ${response.data}");
-      return response.data is Map ? response.data : null;
+      final response = await _dio.get('/user/profile',
+          options: Options(headers: {'Authorization': 'Bearer $token'}));
+      return response.data;
     } catch (e) {
       print('Get profile error: $e');
       return null;
@@ -208,35 +210,20 @@ class ApiService {
     File? idCardImage,
   }) async {
     final token = await getToken();
-    final gps = await getCurrentLocationMap();
-    final publicIp = await getPublicIP();
-
     FormData formData = FormData.fromMap({
       ...data,
       if (idCardImage != null)
-        'id_card_image': await MultipartFile.fromFile(
-          idCardImage.path,
-          filename: idCardImage.path.split('/').last,
-        ),
-      'lat': gps['latitude'],
-      'lng': gps['longitude'],
-      'is_mocked': gps['isMocked'],
-      'public_ip': publicIp,
-      'client_time': DateTime.now().toUtc().toIso8601String(),
+        'id_card_image': await MultipartFile.fromFile(idCardImage.path),
     });
 
     try {
-      final response = await _dio.post(
-        '/user/profile/update',
-        data: formData,
-        options: Options(
-          headers: {
+      final response = await _dio.post('/user/profile/update',
+          data: formData,
+          options: Options(headers: {
             'Authorization': 'Bearer $token',
             'Content-Type': 'multipart/form-data',
-          },
-        ),
-      );
-      print("API /user/profile/update RESPONSE: ${response.statusCode} | ${response.data}");
+          }));
+
       return response.statusCode == 200;
     } catch (e) {
       print('Update profile error: $e');
@@ -248,6 +235,4 @@ class ApiService {
   String getImageUrl(String filename) {
     return '$baseUrl/storage/uploads/$filename';
   }
-
-  // ====== (เพิ่มอื่นๆตามที่ต้องการได้เลย) ======
 }
