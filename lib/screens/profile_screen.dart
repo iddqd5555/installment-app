@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../services/api_service.dart';
+import '../screens/login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -101,6 +102,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() {
       isSubmitting = false;
     });
+  }
+
+  Future<void> logout() async {
+    await apiService.clearToken();
+    if (mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (route) => false,
+      );
+    }
   }
 
   @override
@@ -234,6 +245,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       });
                     }
                   : null,
+            ),
+
+            const SizedBox(height: 32),
+            // ปุ่ม logout
+            ListTile(
+              leading: const Icon(Icons.logout, color: Colors.red),
+              title: const Text("ออกจากระบบ", style: TextStyle(color: Colors.red)),
+              onTap: logout,
             ),
           ],
         ),

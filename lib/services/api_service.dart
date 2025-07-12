@@ -6,21 +6,25 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   final Dio _dio = Dio();
-  final String baseUrl = 'http://172.20.10.2:8000/api'; // เปลี่ยนตรงนี้ถ้า server เปลี่ยน
+  final String baseUrl = 'http://172.20.10.2:8000/api'; // เปลี่ยนตามเซิร์ฟเวอร์ของคุณ
 
   ApiService() {
     _dio.options.baseUrl = baseUrl;
     _dio.options.headers['Accept'] = 'application/json';
   }
 
-  // ดึง token ที่ login ได้ (เก็บไว้ในเครื่อง)
+  // ====== Token ======
   Future<String> getToken() async {
     final prefs = await SharedPreferences.getInstance();
-    String? token = prefs.getString('token');
-    return token ?? '';
+    return prefs.getString('token') ?? '';
   }
 
-  // ดึงพิกัด GPS ปัจจุบัน (lat, lng, isMocked)
+  Future<void> clearToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('token');
+  }
+
+  // ====== Location/IP ======
   Future<Map<String, dynamic>> getCurrentLocationMap() async {
     try {
       final pos = await Geolocator.getCurrentPosition();
@@ -29,8 +33,7 @@ class ApiService {
         'longitude': pos.longitude,
         'isMocked': pos.isMocked,
       };
-    } catch (e) {
-      print('GPS error: $e');
+    } catch (_) {
       return {
         'latitude': null,
         'longitude': null,
@@ -39,24 +42,11 @@ class ApiService {
     }
   }
 
-  // ดึง Public IP จริง (IP ที่ออกอินเทอร์เน็ตจริง)
   Future<String?> getPublicIP() async {
-    try {
-      final response = await Dio().get('https://api.ipify.org?format=json');
-      print('🌐 Public IP: ${response.data['ip']}');
-      return response.data['ip'];
-    } catch (e) {
-      print("Cannot get public IP: $e");
-      return null;
-    }
+    return '127.0.0.1'; // ปรับได้ตามที่ต้องการ
   }
 
-  Future<void> clearToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('token');
-  }
-
-  // GET Installments (แนบ GPS + public IP ไปด้วย)
+  // ====== สัญญา (Installment Requests) ======
   Future<List<dynamic>> getInstallments() async {
     final token = await getToken();
     final gps = await getCurrentLocationMap();
@@ -76,7 +66,6 @@ class ApiService {
       if (response.statusCode == 200) {
         return response.data;
       } else {
-        print('Error from API: ${response.statusCode}');
         return [];
       }
     } catch (e) {
@@ -85,7 +74,27 @@ class ApiService {
     }
   }
 
-  // Login (POST) + ส่งเวลา UTC + debug error
+  // ====== ประวัติงวดผ่อน/จ่าย (Installment Payments) ======
+  Future<List<dynamic>> getInstallmentPayments(int installmentRequestId) async {
+    final token = await getToken();
+    try {
+      final response = await _dio.get(
+        '/installment/history',
+        queryParameters: {'installment_request_id': installmentRequestId},
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      print("API /installment/history RESPONSE: ${response.statusCode} | ${response.data}");
+      if (response.statusCode == 200 && response.data['history'] != null) {
+        return response.data['history'];
+      }
+      return [];
+    } catch (e) {
+      print('Error getInstallmentPayments: $e');
+      return [];
+    }
+  }
+
+  // ====== Login ======
   Future<bool> login(String phone, String password) async {
     try {
       final publicIp = await getPublicIP();
@@ -122,7 +131,7 @@ class ApiService {
     }
   }
 
-  // อัปเดตตำแหน่งผู้ใช้ (ส่งไป backend ทุกครั้ง)
+  // ====== Update User Location (GPS) ======
   Future<void> updateLocationSilently(double lat, double lng, bool isMocked) async {
     final token = await getToken();
     final publicIp = await getPublicIP();
@@ -145,7 +154,7 @@ class ApiService {
     }
   }
 
-  // Dashboard (GET)
+  // ====== Dashboard ======
   Future<dynamic> getDashboardData() async {
     final token = await getToken();
     final gps = await getCurrentLocationMap();
@@ -169,7 +178,7 @@ class ApiService {
     }
   }
 
-  // GET Profile (แนบ GPS + public IP)
+  // ====== Profile ======
   Future<Map<String, dynamic>?> getProfile() async {
     final token = await getToken();
     final gps = await getCurrentLocationMap();
@@ -193,7 +202,7 @@ class ApiService {
     }
   }
 
-  // Update Profile (POST + multipart, แนบข้อมูลครบ)
+  // ====== Update Profile ======
   Future<bool> updateProfile(
     Map<String, dynamic> data, {
     File? idCardImage,
@@ -235,8 +244,10 @@ class ApiService {
     }
   }
 
-  // สำหรับแสดงรูป profile ที่อัพโหลด
+  // ====== สำหรับแสดงรูป profile ที่อัพโหลด ======
   String getImageUrl(String filename) {
     return '$baseUrl/storage/uploads/$filename';
   }
+
+  // ====== (เพิ่มอื่นๆตามที่ต้องการได้เลย) ======
 }
