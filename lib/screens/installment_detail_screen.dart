@@ -26,8 +26,9 @@ class _InstallmentDetailScreenState extends State<InstallmentDetailScreen> {
   Future<void> fetchPayments() async {
     setState(() => isLoading = true);
     final data = await apiService.getInstallmentPayments(widget.installment['id']);
+    // กรองเฉพาะ amount > 0 เท่านั้น
     setState(() {
-      payments = data;
+      payments = data.where((p) => double.tryParse('${p['amount'] ?? 0}')! > 0).toList();
       isLoading = false;
     });
   }
@@ -36,9 +37,9 @@ class _InstallmentDetailScreenState extends State<InstallmentDetailScreen> {
     if (dt == null) return "-";
     try {
       final d = DateTime.parse(dt);
-      return DateFormat('d MMM yyyy HH:mm', 'th').format(d);
+      return DateFormat('d MMM yyyy', 'th').format(d);
     } catch (_) {
-      return dt ?? "-";
+      return dt;
     }
   }
 
@@ -104,7 +105,7 @@ class _InstallmentDetailScreenState extends State<InstallmentDetailScreen> {
                   ),
                 ),
                 const Divider(),
-                const Text('ประวัติการชำระเงิน:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const Text('ประวัติการชำระเงิน (ตามงวดจริง):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 ...payments.map((payment) {
                   return Card(
                     child: ListTile(
@@ -125,10 +126,10 @@ class _InstallmentDetailScreenState extends State<InstallmentDetailScreen> {
                         children: [
                           Icon(
                             payment['status'] == 'approved' && payment['payment_status'] == 'paid'
-                              ? Icons.check_circle
-                              : payment['status'] == 'pending'
-                                ? Icons.hourglass_top
-                                : Icons.cancel,
+                                ? Icons.check_circle
+                                : payment['status'] == 'pending'
+                                    ? Icons.hourglass_top
+                                    : Icons.cancel,
                             color: getStatusColor(payment),
                             size: 26,
                           ),

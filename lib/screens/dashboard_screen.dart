@@ -3,6 +3,8 @@ import '../services/api_service.dart';
 import 'package:intl/intl.dart';
 import 'installment_dashboard_screen.dart';
 import 'login_screen.dart';
+import 'package:installment_app/screens/payment_screen.dart';
+
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -33,7 +35,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
     try {
       final data = await apiService.getDashboardData();
-      print("DASHBOARD RESPONSE: $data"); // <-- เพิ่มบรรทัดนี้
+      print("DASHBOARD DATA: $data");
       if (data == null) {
         setState(() {
           errorMessage = "โหลดข้อมูล dashboard ไม่สำเร็จ หรือ Token ผิด";
@@ -69,6 +71,50 @@ class _DashboardScreenState extends State<DashboardScreen> {
     } catch (_) {
       return dt;
     }
+  }
+
+  // ==== เพิ่มฟังก์ชันคำนวณค้างชำระ ====
+  int countOverdueInstallments({
+    required String startDate,
+    required int period,
+  }) {
+    final DateTime start = DateTime.parse(startDate);
+    final now = DateTime.now();
+    int count = 0;
+    for (int i = 0; i < period; i++) {
+      final due = start.add(Duration(days: i));
+      if (due.isBefore(now)) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  double calculateOverdueTotal({
+    required String startDate,
+    required int period,
+    required double dailyAmount,
+  }) {
+    final overdue = countOverdueInstallments(startDate: startDate, period: period);
+    return overdue * dailyAmount;
+  }
+
+  int daysPassedFromStart(String startDate) {
+    final start = DateTime.parse(startDate);
+    final now = DateTime.now();
+    final diff = now.difference(start).inDays;
+    return diff >= 0 ? diff : 0;
+  }
+
+  Widget buildOverdueRow(int overdueCount, double overdueTotal) {
+    if (overdueCount <= 0) {
+      return const SizedBox.shrink();
+    }
+    return detailRow(
+      Icons.error,
+      'ยอดค้างชำระ ($overdueCount งวด)',
+      '${overdueTotal.toStringAsFixed(2)} บาท',
+    );
   }
 
   Color? getStatusColor(String? status) {
@@ -117,6 +163,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildMainDashboard() {
+    // --- เตรียมข้อมูลใช้คำนวณงวดค้าง/วันค้าง ---
+    final String startDate = dashboardData?['start_date'] ?? '2025-07-01';
+    final int period = dashboardData?['installment_period'] ?? 45;
+    final double dailyAmount = dashboardData?['daily_payment_amount'] ?? 251.0;
+    final int overdueCount = countOverdueInstallments(startDate: startDate, period: period);
+    final double overdueTotal = calculateOverdueTotal(startDate: startDate, period: period, dailyAmount: dailyAmount);
+    final int daysPassed = daysPassedFromStart(startDate);
+
     return isLoading
         ? const Center(child: CircularProgressIndicator())
         : (errorMessage != null)
@@ -149,6 +203,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 detailRow(Icons.account_balance_wallet, 'ยอดชำระล่วงหน้า', '${parseNumber(dashboardData?['advance_payment']).toStringAsFixed(2)} บาท'),
                                 detailRow(Icons.calendar_today, 'วันชำระครั้งถัดไป', dashboardData?['next_payment_date'] ?? '-'),
                                 detailRow(Icons.warning, 'ค่าปรับสะสม', '${parseNumber(dashboardData?['total_penalty']).toStringAsFixed(2)} บาท'),
+                                buildOverdueRow(overdueCount, overdueTotal), // <<< เพิ่มนี้!
                                 const Divider(height: 20, thickness: 1),
                                 const Text('💰 ชำระแล้วทั้งหมด', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                                 const SizedBox(height: 8),
@@ -170,33 +225,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   ),
                                 ),
                                 const Divider(height: 20, thickness: 1),
-                                Builder(
-                                  builder: (_) {
-                                    int installmentPeriod = int.tryParse('${dashboardData?['installment_period'] ?? 1}') ?? 1;
-                                    int daysPassed = int.tryParse('${dashboardData?['days_passed'] ?? 0}') ?? 0;
-                                    double timeProgress = installmentPeriod != 0 ? daysPassed / installmentPeriod : 0;
-                                    return Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          '⏳ ระยะเวลาการผ่อน: $daysPassed / $installmentPeriod วัน',
-                                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        LinearProgressIndicator(
-                                          value: timeProgress,
-                                          backgroundColor: Colors.grey[300],
-                                          color: Colors.blue,
-                                          minHeight: 12,
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        Align(
-                                          alignment: Alignment.centerRight,
-                                          child: Text('${(timeProgress * 100).toStringAsFixed(2)}%', style: const TextStyle(fontSize: 14)),
-                                        ),
-                                      ],
-                                    );
-                                  },
+                                Text(
+                                  '⏳ ระยะเวลาการผ่อน: $daysPassed / $period วัน',
+                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 8),
+                                LinearProgressIndicator(
+                                  value: period != 0 ? daysPassed / period : 0,
+                                  backgroundColor: Colors.grey[300],
+                                  color: Colors.blue,
+                                  minHeight: 12,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: Text('${((daysPassed / (period == 0 ? 1 : period)) * 100).toStringAsFixed(2)}%', style: const TextStyle(fontSize: 14)),
                                 ),
                               ],
                             ),
@@ -271,7 +314,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (installmentRequestId == null) {
         return const Center(child: Text("ไม่พบข้อมูลสัญญา"));
       }
-      return InstallmentDashboardScreen(installmentRequestId: installmentRequestId!);
+      // 👇 ส่ง installmentRequestId ไป PaymentScreen
+      return PaymentScreen(installmentRequestId: installmentRequestId!);
     }
     if (_selectedIndex == 2) {
       return Center(

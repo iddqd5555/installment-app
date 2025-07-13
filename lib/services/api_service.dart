@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   final Dio _dio = Dio();
-  final String baseUrl = 'http://172.20.10.2:8000/api';
+  final String baseUrl = 'http://192.168.1.41:8000/api';
 
   ApiService() {
     _dio.options.baseUrl = baseUrl;
@@ -45,40 +45,43 @@ class ApiService {
     return '127.0.0.1';
   }
 
-  // ====== Upload Slip (NEW!) ======
+  // ====== Upload Slip (ถูกต้องตาม Laravel) ======
   Future<bool> uploadSlip({
-    required int installmentPaymentId,
-    required File paymentProof,
+    required int installmentRequestId,
+    required List<String> payForDates,
     required double amountPaid,
-    required String slipHash,
+    required File slipFile,
   }) async {
     final token = await getToken();
     final gps = await getCurrentLocationMap();
     final publicIp = await getPublicIP();
 
-    FormData formData = FormData.fromMap({
-      'installment_payment_id': installmentPaymentId,
-      'amount_paid': amountPaid,
-      'slip_hash': slipHash,
-      'payment_proof': await MultipartFile.fromFile(paymentProof.path),
-      'lat': gps['latitude'],
-      'lng': gps['longitude'],
-      'is_mocked': gps['isMocked'],
-      'public_ip': publicIp,
-      'client_time': DateTime.now().toUtc().toIso8601String(),
-    });
+    FormData formData = FormData();
+    formData.fields
+      ..add(MapEntry('installment_request_id', installmentRequestId.toString()))
+      ..add(MapEntry('amount_paid', amountPaid.toString()))
+      ..add(MapEntry('client_time', DateTime.now().toUtc().toIso8601String()));
+    // ส่ง pay_for_dates เป็น array [pay_for_dates[]]
+    for (final date in payForDates) {
+      formData.fields.add(MapEntry('pay_for_dates[]', date));
+    }
+    formData.files.add(MapEntry('slip', await MultipartFile.fromFile(slipFile.path)));
+    if (gps['latitude'] != null) formData.fields.add(MapEntry('lat', gps['latitude'].toString()));
+    if (gps['longitude'] != null) formData.fields.add(MapEntry('lng', gps['longitude'].toString()));
+    if (gps['isMocked'] != null) formData.fields.add(MapEntry('is_mocked', '${gps['isMocked']}'));
+    if (publicIp != null) formData.fields.add(MapEntry('public_ip', publicIp));
 
     try {
       final response = await _dio.post(
-        '/confirm-slip',
+        '/installment/pay',
         data: formData,
         options: Options(headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'multipart/form-data',
         }),
       );
-
-      return response.statusCode == 200;
+      print('UPLOAD RESPONSE: ${response.statusCode} ${response.data}');
+      return response.statusCode == 200 && (response.data['success'] == true);
     } catch (e) {
       print('Upload Slip Error: $e');
       return false;
@@ -110,7 +113,6 @@ class ApiService {
         },
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
-
       return response.statusCode == 200;
     } catch (e) {
       print('Confirm QR Error: $e');
@@ -155,7 +157,6 @@ class ApiService {
         'lng': gps['longitude'],
         'is_mocked': gps['isMocked'],
       });
-
       if (response.statusCode == 200 && response.data['token'] != null) {
         final prefs = await SharedPreferences.getInstance();
         prefs.setString('token', response.data['token']);
@@ -191,6 +192,24 @@ class ApiService {
     }
   }
 
+  // ====== ประวัติงวดผ่อน (ดึงจาก backend เท่านั้น) ======
+  Future<List<dynamic>> getInstallmentPayments(int installmentRequestId) async {
+    final token = await getToken();
+    try {
+      final response = await _dio.get(
+        '/installment/history',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+        queryParameters: {
+          'installment_request_id': installmentRequestId,
+        },
+      );
+      return response.data['history'] ?? [];
+    } catch (e) {
+      print('Get Installment Payments Error: $e');
+      return [];
+    }
+  }
+
   // ====== Profile ======
   Future<Map<String, dynamic>?> getProfile() async {
     final token = await getToken();
@@ -223,7 +242,6 @@ class ApiService {
             'Authorization': 'Bearer $token',
             'Content-Type': 'multipart/form-data',
           }));
-
       return response.statusCode == 200;
     } catch (e) {
       print('Update profile error: $e');
@@ -231,7 +249,6 @@ class ApiService {
     }
   }
 
-  // ====== สำหรับแสดงรูป profile ที่อัพโหลด ======
   String getImageUrl(String filename) {
     return '$baseUrl/storage/uploads/$filename';
   }

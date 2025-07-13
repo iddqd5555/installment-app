@@ -32,7 +32,7 @@ class _InstallmentDashboardScreenState extends State<InstallmentDashboardScreen>
 
   Future<void> _fetchHistory() async {
     setState(() => _isLoading = true);
-    final uri = Uri.parse('http://172.20.10.2:8000/api/installment/history?installment_request_id=${widget.installmentRequestId}');
+    final uri = Uri.parse('http://192.168.1.41:8000/api/installment/history?installment_request_id=${widget.installmentRequestId}');
     final resp = await http.get(uri);
     if (resp.statusCode == 200) {
       final data = json.decode(resp.body);
@@ -62,7 +62,7 @@ class _InstallmentDashboardScreenState extends State<InstallmentDashboardScreen>
       _isPaying = true;
       _resultMsg = null;
     });
-    final uri = Uri.parse('http://172.20.10.2:8000/api/installment/pay');
+    final uri = Uri.parse('http://192.168.1.41:8000/api/installment/pay');
     final req = http.MultipartRequest('POST', uri)
       ..fields['installment_request_id'] = widget.installmentRequestId.toString()
       ..fields['amount_paid'] = _payAmount.toString();
