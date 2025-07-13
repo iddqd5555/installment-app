@@ -12,7 +12,6 @@ class ApiService {
     _dio.options.headers['Accept'] = 'application/json';
   }
 
-  // ====== Token ======
   Future<String> getToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('token') ?? '';
@@ -23,7 +22,6 @@ class ApiService {
     await prefs.remove('token');
   }
 
-  // ====== Location/IP ======
   Future<Map<String, dynamic>> getCurrentLocationMap() async {
     try {
       final pos = await Geolocator.getCurrentPosition();
@@ -45,7 +43,6 @@ class ApiService {
     return '127.0.0.1';
   }
 
-  // ====== Upload Slip ======
   Future<bool> uploadSlip({
     required int installmentRequestId,
     required List<String> payForDates,
@@ -70,19 +67,16 @@ class ApiService {
     if (gps['isMocked'] != null) formData.fields.add(MapEntry('is_mocked', '${gps['isMocked']}'));
     if (publicIp != null) formData.fields.add(MapEntry('public_ip', publicIp));
 
-    // ====== เพิ่มตรงนี้ ======
     print('UPLOAD URL: ${_dio.options.baseUrl}/installment/pay');
     print('Token: $token');
-    // =========================
 
     try {
       final response = await _dio.post(
         '/installment/pay',
         data: formData,
-        options: Options(headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'multipart/form-data',
-        }),
+        options: Options(
+          headers: {'Authorization': 'Bearer $token'},
+        ),
       );
       print('UPLOAD RESPONSE: ${response.statusCode} ${response.data}');
       return response.statusCode == 200 && (response.data['success'] == true);
@@ -92,7 +86,6 @@ class ApiService {
     }
   }
 
-  // ====== Confirm QR Payment ======
   Future<bool> confirmQrPayment({
     required int installmentPaymentId,
     required String qrRef,
@@ -124,30 +117,6 @@ class ApiService {
     }
   }
 
-  // ====== สัญญา (Installment Requests) ======
-  Future<List<dynamic>> getInstallments() async {
-    final token = await getToken();
-    final gps = await getCurrentLocationMap();
-    final publicIp = await getPublicIP();
-    try {
-      final response = await _dio.get(
-        '/installments',
-        options: Options(headers: {'Authorization': 'Bearer $token'}),
-        queryParameters: {
-          'lat': gps['latitude'],
-          'lng': gps['longitude'],
-          'is_mocked': gps['isMocked'],
-          'public_ip': publicIp,
-        },
-      );
-      return response.data;
-    } catch (e) {
-      print('Connection Error: $e');
-      return [];
-    }
-  }
-
-  // ====== Login ======
   Future<bool> login(String phone, String password) async {
     try {
       final publicIp = await getPublicIP();
@@ -164,7 +133,7 @@ class ApiService {
       if (response.statusCode == 200 && response.data['token'] != null) {
         final prefs = await SharedPreferences.getInstance();
         prefs.setString('token', response.data['token']);
-        print("TOKEN: ${response.data['token']}"); // DEBUG TOKEN
+        print("TOKEN: ${response.data['token']}"); // debug token
         return true;
       }
       return false;
@@ -174,7 +143,6 @@ class ApiService {
     }
   }
 
-  // ====== Dashboard ======
   Future<dynamic> getDashboardData() async {
     final token = await getToken();
     final gps = await getCurrentLocationMap();
@@ -197,7 +165,6 @@ class ApiService {
     }
   }
 
-  // ====== ประวัติงวดผ่อน ======
   Future<List<dynamic>> getInstallmentPayments(int installmentRequestId) async {
     final token = await getToken();
     try {
@@ -215,7 +182,6 @@ class ApiService {
     }
   }
 
-  // ====== Profile ======
   Future<Map<String, dynamic>?> getProfile() async {
     final token = await getToken();
     try {
@@ -228,7 +194,6 @@ class ApiService {
     }
   }
 
-  // ====== Update Profile ======
   Future<bool> updateProfile(
     Map<String, dynamic> data, {
     File? idCardImage,
@@ -245,7 +210,6 @@ class ApiService {
           data: formData,
           options: Options(headers: {
             'Authorization': 'Bearer $token',
-            'Content-Type': 'multipart/form-data',
           }));
       return response.statusCode == 200;
     } catch (e) {
