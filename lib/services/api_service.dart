@@ -45,7 +45,7 @@ class ApiService {
     return '127.0.0.1';
   }
 
-  // ====== Upload Slip (ถูกต้องตาม Laravel) ======
+  // ====== Upload Slip ======
   Future<bool> uploadSlip({
     required int installmentRequestId,
     required List<String> payForDates,
@@ -61,7 +61,6 @@ class ApiService {
       ..add(MapEntry('installment_request_id', installmentRequestId.toString()))
       ..add(MapEntry('amount_paid', amountPaid.toString()))
       ..add(MapEntry('client_time', DateTime.now().toUtc().toIso8601String()));
-    // ส่ง pay_for_dates เป็น array [pay_for_dates[]]
     for (final date in payForDates) {
       formData.fields.add(MapEntry('pay_for_dates[]', date));
     }
@@ -70,6 +69,11 @@ class ApiService {
     if (gps['longitude'] != null) formData.fields.add(MapEntry('lng', gps['longitude'].toString()));
     if (gps['isMocked'] != null) formData.fields.add(MapEntry('is_mocked', '${gps['isMocked']}'));
     if (publicIp != null) formData.fields.add(MapEntry('public_ip', publicIp));
+
+    // ====== เพิ่มตรงนี้ ======
+    print('UPLOAD URL: ${_dio.options.baseUrl}/installment/pay');
+    print('Token: $token');
+    // =========================
 
     try {
       final response = await _dio.post(
@@ -88,7 +92,7 @@ class ApiService {
     }
   }
 
-  // ====== Confirm QR Payment (NEW!) ======
+  // ====== Confirm QR Payment ======
   Future<bool> confirmQrPayment({
     required int installmentPaymentId,
     required String qrRef,
@@ -160,6 +164,7 @@ class ApiService {
       if (response.statusCode == 200 && response.data['token'] != null) {
         final prefs = await SharedPreferences.getInstance();
         prefs.setString('token', response.data['token']);
+        print("TOKEN: ${response.data['token']}"); // DEBUG TOKEN
         return true;
       }
       return false;
@@ -192,7 +197,7 @@ class ApiService {
     }
   }
 
-  // ====== ประวัติงวดผ่อน (ดึงจาก backend เท่านั้น) ======
+  // ====== ประวัติงวดผ่อน ======
   Future<List<dynamic>> getInstallmentPayments(int installmentRequestId) async {
     final token = await getToken();
     try {
