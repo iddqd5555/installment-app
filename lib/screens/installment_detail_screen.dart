@@ -1,171 +1,163 @@
 import 'package:flutter/material.dart';
-import '../services/api_service.dart';
-import 'upload_document_screen.dart';
-import 'package:intl/intl.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'payment_screen.dart';
 
-class InstallmentDetailScreen extends StatefulWidget {
+class InstallmentDetailScreen extends StatelessWidget {
   final dynamic installment;
 
-  const InstallmentDetailScreen({required this.installment, super.key});
+  const InstallmentDetailScreen({super.key, required this.installment});
 
-  @override
-  State<InstallmentDetailScreen> createState() => _InstallmentDetailScreenState();
-}
+  Color _danger(BuildContext ctx) => Theme.of(ctx).colorScheme.error;
+  Color _accent(BuildContext ctx) => Theme.of(ctx).colorScheme.primary;
 
-class _InstallmentDetailScreenState extends State<InstallmentDetailScreen> {
-  final ApiService apiService = ApiService();
-  List<dynamic> payments = [];
-  bool isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    fetchPayments();
-  }
-
-  Future<void> fetchPayments() async {
-    setState(() => isLoading = true);
-    final data = await apiService.getInstallmentPayments(widget.installment['id']);
-    // กรองเฉพาะ amount > 0 เท่านั้น
-    setState(() {
-      payments = data.where((p) => double.tryParse('${p['amount'] ?? 0}')! > 0).toList();
-      isLoading = false;
-    });
-  }
-
-  String formatDate(String? dt) {
-    if (dt == null) return "-";
+  String formatDate(String dateStr) {
+    if (dateStr.isEmpty || dateStr == '-') return '-';
     try {
-      final d = DateTime.parse(dt);
-      return DateFormat('d MMM yyyy', 'th').format(d);
-    } catch (_) {
-      return dt;
+      DateTime dt = DateTime.parse(dateStr);
+      return "${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}";
+    } catch (e) {
+      if (dateStr.contains('T')) {
+        return dateStr.split('T').first;
+      }
+      return dateStr;
     }
   }
 
-  Color getStatusColor(Map payment) {
-    if (payment['status'] == 'approved' && payment['payment_status'] == 'paid') {
-      return Colors.green;
-    } else if (payment['status'] == 'pending') {
-      return Colors.orange;
-    } else if (payment['status'] == 'rejected') {
-      return Colors.red;
+  bool isOverdue(String dateStr) {
+    try {
+      final due = DateTime.parse(dateStr).toLocal();
+      final now = DateTime.now();
+      return !due.isAfter(DateTime(now.year, now.month, now.day));
+    } catch (e) {
+      return false;
     }
-    return Colors.grey;
   }
 
-  String getStatusText(Map payment) {
-    if (payment['status'] == 'approved' && payment['payment_status'] == 'paid') {
-      return 'จ่ายสำเร็จ (Auto)';
-    } else if (payment['status'] == 'pending') {
-      return 'รอตรวจสอบ';
-    } else if (payment['status'] == 'rejected') {
-      return 'ไม่อนุมัติ';
-    }
-    return '-';
+  String fnum(dynamic n) {
+    final v = double.tryParse(n?.toString() ?? '0') ?? 0.0;
+    return v.toStringAsFixed(2);
   }
 
   @override
   Widget build(BuildContext context) {
-    final installment = widget.installment;
+    final payments = (installment['installment_payments'] ?? []) as List<dynamic>;
+    final contractNumber = installment['contract_number'] ?? "-";
+    final goldAmount = fnum(installment['gold_amount']);
+    final period = installment['installment_period']?.toString() ?? "-";
+    final totalInstallment = fnum(installment['total_installment_amount']);
+    final status = installment['status'] ?? "-";
+    final paid = double.tryParse(installment['total_paid']?.toString() ?? '0') ?? 0.0;
+    final paidStr = paid.toStringAsFixed(2);
+    final installmentId = installment['id'];
+
+    final unpaid = payments
+        .where((p) =>
+            (p['payment_status'] ?? p['status']) != 'paid' &&
+            (p['payment_status'] ?? p['status']) != 'advance' &&
+            isOverdue(p['payment_due_date'] ?? ''))
+        .toList();
+
+    final paidList = payments
+        .where((p) =>
+            (p['payment_status'] ?? p['status']) == 'paid' ||
+            (p['payment_status'] ?? p['status']) == 'advance')
+        .toList();
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('รายละเอียดสัญญาสินเชื่อ'),
-        backgroundColor: Colors.red[900],
-        foregroundColor: Colors.white,
+        title: Text('รายละเอียดสัญญา $contractNumber',
+            style: GoogleFonts.prompt(fontWeight: FontWeight.bold, color: _accent(context))),
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                Card(
-                  child: ListTile(
-                    title: Text('เลขที่สัญญา: ${installment['contract_number'] ?? "-"}'),
-                    subtitle: Text('เลขที่ชำระเงิน: ${installment['payment_number'] ?? "-"}'),
-                  ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Card(
+            color: Theme.of(context).cardColor,
+            elevation: 3,
+            margin: EdgeInsets.only(bottom: 14),
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('เลขที่สัญญา: $contractNumber',
+                      style: GoogleFonts.prompt(fontWeight: FontWeight.bold, fontSize: 16, color: _accent(context))),
+                  Text('จำนวนทอง: $goldAmount บาท', style: GoogleFonts.prompt()),
+                  Text('จำนวนวันผ่อน: $period วัน', style: GoogleFonts.prompt()),
+                  Text('ยอดรวมที่ต้องผ่อน: $totalInstallment บาท', style: GoogleFonts.prompt()),
+                  Text('สถานะสัญญา: $status', style: GoogleFonts.prompt()),
+                  SizedBox(height: 6),
+                  Text('ยอดชำระแล้ว: $paidStr บาท',
+                      style: GoogleFonts.prompt(color: Colors.green)),
+                ],
+              ),
+            ),
+          ),
+
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Center(
+              child: ElevatedButton.icon(
+                icon: Icon(Icons.upload_file),
+                label: Text('อัปโหลดสลิป/ชำระเงิน', style: GoogleFonts.prompt(fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange[700],
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                Card(
-                  child: ListTile(
-                    title: Text('จำนวนทอง: ${installment['gold_amount'] ?? "-"} บาท'),
-                    subtitle: Text('ผ่อนงวดละ: ${installment['daily_payment_amount'] ?? "-"} บาท'),
-                  ),
-                ),
-                Card(
-                  child: ListTile(
-                    title: Text('ยอดรวมที่ต้องผ่อน: ${installment['total_installment_amount'] ?? "-"} บาท'),
-                    subtitle: Text('จำนวนวันในการผ่อน: ${installment['installment_period'] ?? "-"} วัน'),
-                  ),
-                ),
-                Card(
-                  child: ListTile(
-                    title: Text('วันที่เริ่มสัญญา: ${installment['start_date'] ?? "-"}'),
-                    subtitle: Text('สถานะสัญญา: ${installment['status'] ?? "-"}'),
-                  ),
-                ),
-                const Divider(),
-                const Text('ประวัติการชำระเงิน (ตามงวดจริง):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                ...payments.map((payment) {
-                  return Card(
-                    child: ListTile(
-                      leading: Icon(Icons.payment, color: getStatusColor(payment)),
-                      title: Text(
-                        'วันที่: ${formatDate(payment['payment_due_date'])}',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                      ),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('ยอดที่ต้องชำระ: ${payment['amount']} บาท'),
-                          Text('ยอดที่ชำระแล้ว: ${payment['amount_paid']} บาท'),
-                        ],
-                      ),
-                      trailing: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            payment['status'] == 'approved' && payment['payment_status'] == 'paid'
-                                ? Icons.check_circle
-                                : payment['status'] == 'pending'
-                                    ? Icons.hourglass_top
-                                    : Icons.cancel,
-                            color: getStatusColor(payment),
-                            size: 26,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            getStatusText(payment),
-                            style: TextStyle(
-                              color: getStatusColor(payment),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }).toList(),
-                const SizedBox(height: 20),
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.upload_file),
-                  label: const Text('อัปโหลดเอกสารเพิ่มเติม'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red[800],
-                    foregroundColor: Colors.white,
-                  ),
-                  onPressed: () {
-                    Navigator.push(
+                onPressed: () async {
+                  if (installmentId != null) {
+                    await Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => UploadDocumentScreen(installmentId: installment['id']),
+                        builder: (_) => PaymentScreen(installmentRequestId: installmentId),
                       ),
                     );
-                  },
-                ),
-              ],
+                  }
+                },
+              ),
             ),
+          ),
+
+          Text('⏳ งวดค้างชำระ',
+              style: GoogleFonts.prompt(fontWeight: FontWeight.bold, color: Colors.orange[700])),
+          if (unpaid.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Text('ไม่มีงวดค้างชำระ', style: GoogleFonts.prompt(color: Colors.black54)),
+            ),
+          ...unpaid.map((p) {
+            final dueDate = formatDate(p['payment_due_date'] ?? '-');
+            final amount = fnum(p['amount']);
+            return ListTile(
+              leading: Icon(Icons.warning, color: Colors.orange),
+              title: Text("ครบกำหนด: $dueDate", style: GoogleFonts.prompt()),
+              subtitle: Text("ยอด: $amount บาท", style: GoogleFonts.prompt()),
+              trailing: Text('ยังไม่จ่าย', style: GoogleFonts.prompt(color: _danger(context))),
+            );
+          }).toList(),
+          Divider(height: 24, thickness: 1),
+          Text('✅ ประวัติชำระงวด',
+              style: GoogleFonts.prompt(fontWeight: FontWeight.bold, color: Colors.green[600])),
+          if (paidList.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Text('ไม่มีประวัติชำระ', style: GoogleFonts.prompt(color: Colors.black54)),
+            ),
+          ...paidList.map((p) {
+            final dueDate = formatDate(p['payment_due_date'] ?? '-');
+            final amount = fnum(p['amount']);
+            final ref = p['ref'] ?? p['payment_number'] ?? p['slip_reference'] ?? '';
+            return ListTile(
+              leading: Icon(Icons.check_circle, color: Colors.green),
+              title: Text("งวด $dueDate", style: GoogleFonts.prompt()),
+              subtitle: Text("ยอด $amount บาท | อ้างอิง: $ref", style: GoogleFonts.prompt()),
+            );
+          }).toList(),
+        ],
+      ),
     );
   }
 }

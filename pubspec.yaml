@@ -11,14 +11,17 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  http: ^1.1.0
-  image_picker: ^1.1.1
-  intl: ^0.20.2        # ใช้ตัวใหม่สุดก็ได้
+  http: ^1.4.0
+  image_picker: ^1.1.2
+  intl: ^0.20.2
   cupertino_icons: ^1.0.8
   dio: ^5.4.0
   provider: ^6.1.2
-  shared_preferences: ^2.2.3
+  shared_preferences: ^2.2.2
   geolocator: ^12.0.0
+  google_fonts: ^6.2.1
+  pin_code_fields: ^8.0.1
+  file_picker: ^10.2.0
 
 dev_dependencies:
   flutter_test:
